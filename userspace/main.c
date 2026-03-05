@@ -7,6 +7,17 @@
 
 #define NUMOFTHREADS 3
 volatile char last_key = ' '; // shared variable, we dont want the system to optomise it
+volatile int currentScreen = 0;
+
+
+void drawGame1();
+void drawGame2();
+void drawGame3();
+void drawGame4();
+void drawGame5();
+void drawGame6();
+void drawGame7();
+
 
 void* thread_function(void* arg) {
     int id = *(int*)arg;
@@ -32,11 +43,15 @@ void* input_thread(void* arg)
         if (bytes > 0)
         {
            last_key = buffer[0];
-           usleep(1000); 
+           
+           if (last_key >= '1' && last_key <= '7')
+           {
+           currentScreen = last_key - '0';
+           }
         }
-
-        
+           usleep(1000); 
     }
+
 
     
 
@@ -50,10 +65,50 @@ void* render_thread(void* arg)
     noecho();
     curs_set(0);
 
+    
+    
     while (1)
     {
         clear();
-        mvprintw(5, 10, "Key Pressed: %c", last_key);
+        mvprintw(1,10,"MiniGame Console");
+        mvprintw(2,10,"Press 1-7 to switch games");
+
+        switch(currentScreen)
+        {
+            case 1 :
+            drawGame1();
+            break;
+
+            case 2:
+            drawGame2();
+            break;
+
+        case 3:
+            drawGame3();
+            break;
+
+        case 4:
+            drawGame4();
+            break;
+
+        case 5:
+            drawGame5();
+            break;
+
+        case 6:
+            drawGame6();
+            break;
+
+        case 7:
+            drawGame7();
+            break;
+
+        default:
+            mvprintw(5,10,"Press 1-7 to choose a minigame");
+        }
+
+
+        mvprintw(18, 10, "Key Pressed: %c", last_key);
         refresh();
 
         usleep(50000);   // small delay so cpu isn't maxed
@@ -63,7 +118,34 @@ void* render_thread(void* arg)
     return NULL;
 }
     
+void drawGame1() {
+    mvprintw(18, 10, "MINIGAME 1");
+    mvprintw(15, 10, "Press keys to play");
+}
 
+void drawGame2() {
+    mvprintw(3, 5, "MINIGAME 2");
+}
+
+void drawGame3() {
+    mvprintw(3, 5, "MINIGAME 3");
+}
+
+void drawGame4() {
+    mvprintw(3, 5, "MINIGAME 4");
+}
+
+void drawGame5() {
+    mvprintw(3, 5, "MINIGAME 5");
+}
+
+void drawGame6() {
+    mvprintw(3, 5, "MINIGAME 6");
+}
+
+void drawGame7() {
+    mvprintw(3, 5, "MINIGAME 7");
+}
 
 int main() {
 
