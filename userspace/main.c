@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <pthread.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #define NUMOFTHREADS 3
 
@@ -9,16 +11,51 @@ void* thread_function(void* arg) {
     return NULL;
 }
 
+void* input_thread(void* arg)
+{
+    int fd = open("/dev/kw", O_RDONLY);
+
+    if (fd < 0) {
+        perror("Failed to open /dev/kw"); // flag since if its less than 0, it has failed
+        return NULL;
+    }
+
+    char buffer[16];
+
+    while (1)
+    {
+        int bytes = read(fd, buffer, sizeof(buffer));
+
+        if (bytes > 0)
+        {
+            printf("Input: %.*s\n", bytes, buffer);
+        }
+    }
+
+    close(fd);
+    return NULL;
+}
+
 int main() {
 
     pthread_t threads[NUMOFTHREADS];
     int ids[NUMOFTHREADS];
 
-    for (int i = 0; i < NUMOFTHREADS; i++) {
+    for (int i = 0; i < NUMOFTHREADS - 1; i++) {
         ids[i] = i;
-        pthread_create(&threads[i], NULL, thread_function, &ids[i]);
+
+        if (pthread_create(&threads[i], NULL, thread_function, &ids[i]) != 0) {
+            perror("pthread_create");
+            return 1;
+        }
     }
 
+    if (pthread_create(&threads[2], NULL, input_thread, NULL) != 0) {
+        perror("pthread_create");
+        return 1;
+    }
+
+    // wait for the threads
     for (int i = 0; i < NUMOFTHREADS; i++) {
         pthread_join(threads[i], NULL);
     }
