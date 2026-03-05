@@ -15,6 +15,44 @@ static int my_proc_open(struct inode *inode, struct file *file) {
     return single_open(file, my_proc_show, NULL);
 }
 
+static ssize_t my_proc_write(struct file *file, const char __user *ubuf, size_t count, loff_t *ppos) {
+    char buf[64];
+    int val;
+
+    //cap to avoid overflow
+    if (count > sizeof(buf)) {
+        count = sizeof(buf) - 1;
+    }
+
+    //can't dereference ubuf (userspace pointer) directly - copy instead
+    if (copy_from_user(buf, ubuf, count)) {
+        return -EFAULT; //returns number of bytes failed to copy - 0 = success
+    }
+
+    buf[count] = '\0';
+
+    //test
+    //strip newline from echo
+    if (count > 0 && buf[count - 1] == '\n') {
+        buf[count - 1] = '\0';
+    }
+
+    if (strcmp (buf, "reset") == 0) {
+        drv_state.open_count = 0;
+        drv_state.read_count = 0;
+        drv_state.write_count = 0;
+        printk(KERN_INFO "KernelWare: test reset\n");
+    } else if (strcmp (buf, "wah") == 0) {
+        printk(KERN_INFO "WarioWare mode activated\n");
+    } else {
+        printk(KERN_INFO "KernelWare: unknown command\n");
+        return -EFAULT;
+    }
+
+    return count;
+}
+
+
 static const struct proc_ops my_proc_ops = {
     .proc_open    = my_proc_open,
     .proc_read    = seq_read,
