@@ -11,6 +11,9 @@
 
 static int drv_fd = -1;
 
+// To update the menu screen
+extern volatile int currentScreen;
+
 void input_init(int fd)
 {
     drv_fd = fd;
@@ -22,6 +25,11 @@ struct key_mapping {
     int  btn_index;
     char character;
 };
+// Same but for mapping number keycodes to screens
+struct nav_mapping {
+    int keycode;
+    int screen;
+};
 
 //Maps asdf keys, to add more keys ADD TO STRUCT
 static struct key_mapping keymap[] = {
@@ -31,6 +39,16 @@ static struct key_mapping keymap[] = {
     { KEY_F, 3, 'f' },
 };
 static int keymap_size = sizeof(keymap) / sizeof(keymap[0]);
+
+
+//For Nav keys
+static struct nav_mapping navmap[] = {
+    { KEY_1, 1 },
+    { KEY_2, 2 },
+    { KEY_3, 3 },
+};
+static int navmap_size = sizeof(navmap) / sizeof(navmap[0]);
+
 
 void *kw_input_thread(void *arg) // arg isn't used but compiler will give a waring as in pthread signature
 {
@@ -56,7 +74,7 @@ void *kw_input_thread(void *arg) // arg isn't used but compiler will give a wari
         if (ev.type != EV_KEY || ev.value != 1)
             continue;
 
-        // Checks keypressa, sets last key,a nd writes to driver
+        // Checks keypressa, sets last key,and writes to driver
         for (int i = 0; i < keymap_size; i++)
         {
             if (keymap[i].keycode != ev.code)
@@ -72,6 +90,14 @@ void *kw_input_thread(void *arg) // arg isn't used but compiler will give a wari
 
             break;
         }
+
+        // checks nav keys
+        for (int i = 0; i < navmap_size; i++) {
+            if (navmap[i].keycode == ev.code) {
+                currentScreen = navmap[i].screen;
+                break;
+            }
+}
     }
 
     close(kbd_fd);
