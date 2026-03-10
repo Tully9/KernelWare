@@ -55,6 +55,21 @@ static ssize_t kw_write(struct file *file, const char __user *buf, size_t len, l
     buf_len = bytes;
     kernel_buf[bytes] = '\0';
 
+    if (kernel_buf[0] == 'A') {
+    current_state.score++;         // each allocation = score goes up
+}
+    if (kernel_buf[0] == 'F') {
+
+    if (current_state.score > 0)
+        current_state.score--;     // successful free = reduce score
+    else {
+        if (current_state.lives > 0)
+            current_state.lives--; // free with nothing = lose a life
+    }
+}
+
+
+
     data_ready = 1;
     wake_up_interruptible(&my_wq);
 
@@ -84,6 +99,10 @@ static long kw_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
                            (struct kw_config __user *)arg,
                            sizeof(struct kw_config)))
             return -EFAULT;
+
+            current_state.lives      = current_config.lives;
+            current_state.difficulty = current_config.difficulty;
+            current_state.score      = 0;
         return 0;
 
     default:
