@@ -23,7 +23,7 @@ atomic_t open_count = ATOMIC_INIT(0);
 struct kw_state  current_state  = {0};
 struct kw_config current_config = {0};
 
-// Define the shared state here
+// Define shared struct
 struct my_driver_state drv_state = {0};
 
 
@@ -194,6 +194,10 @@ static int __init my_module_init(void)
 
 static void __exit my_module_exit(void) {
     my_proc_exit();
+    device_destroy(my_class, dev_num);
+    class_destroy(my_class);
+    cdev_del(&my_cdev);
+    unregister_chrdev_region(dev_num, 1);
     printk(KERN_INFO "KernelWare: unloaded\n");
 }
 
@@ -202,4 +206,4 @@ module_exit(my_module_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("KernelWare: HardwareIntegrated Micro-Game Engine");
-MODULE_AUTHOR("Aiden, Cathal, Raghib, Tom");
+MODULE_AUTHOR("Aidan, Cathal, Raghib, Tom");
