@@ -11,39 +11,16 @@ static bool timer_active = false;
 
 static enum hrtimer_restart kw_timer_callback(struct hrtimer *timer) {
     unsigned long flags;
+    bool correct;
 
     spin_lock_irqsave(&game_state.lock, flags);
-
-    // if user submitted an answer within time limit (5) seconds
-    if (game_state.answer_correct) {
-        pr_info("Player won game - Advancing to next game.\n"); // prints to the kernel ringg buffer
-        game_state.score += 1;
-        game_state.current_game_id++;
-        game_state.answer_correct = false;
-        game_state.new_game_ready = true;
-
-    }
-    
-    else { //time out
-        pr_info("Game timed out - player loses a life\n");
-
-        if (game_state.lives > 0) {
-            game_state.lives--;
-
-            if (game_state.lives > 0) {
-                game_state.current_game_id++;
-                game_state.new_game_ready = true;
-            } 
-            
-            else {
-                game_state.game_active = false;
-                game_state.new_game_ready = true;
-            }
-        }
-    }
-
-    wake_up_interruptible(&game_state.read_queue);
+    correct = game_state.answer_correct;
     spin_unlock_irqrestore(&game_state.lock, flags);
+
+    if (correct)
+        kw_state_next_game();
+    else
+        kw_state_timeout();
 
     timer_active = false;
 
