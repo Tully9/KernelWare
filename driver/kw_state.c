@@ -8,6 +8,7 @@
 #include <linux/ktime.h>
 #include "kw_state.h"
 #include "kw_timer.h"
+#include "kw_games.h"
 
 struct kw_game_state game_state;
 
@@ -32,10 +33,12 @@ void kw_state_start_round(char playerName[16]) {
 
     // Reset game's state
     game_state.username = playerName;
-    game_state.current_game_id = // Random number of n elements from game_prompts.
+    game_state.previous_game = -1;
+    game_state.current_game_id = kw_games_pick(-1);
+    kw_games_get_prompt(game_state.current_game_id, game_state.prompt, sizeof(game_state.prompt));
     game_state.lives = 3;
     game_state.score = 0;
-    game_state.difficulty = difficulty;
+    game_state.difficulty = 1.0;
     game_state.games_played = 0;
     game_state.game_active = true;
     game_state.answer_correct = false;
@@ -60,7 +63,9 @@ void kw_state_next_game(void) {
 
     spin_lock_irqsave(&game_state.lock, flags);
 
-    // Randomised next game that wasn't the previous game.
+    game_state.previous_game = game_state.current_game_id;
+    game_state.current_game_id = kw_games_pick(game_state.previous_game);
+    kw_games_get_prompt(game_state.current_game_id, game_state.prompt, sizeof(game_state.prompt));
 
     game_state.answer_correct = false;
     game_state.deadline_ns = ktime_get_ns() + (5ULL * 1000000000ULL);

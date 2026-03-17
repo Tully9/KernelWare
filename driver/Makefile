@@ -1,5 +1,5 @@
 obj-m += kernelware.o
-kernelware-objs := kernelware_main.o kernelware_proc.o
+kernelware-objs := kernelware_main.o kernelware_proc.o kw_games.o
 all:
 	make -C /lib/modules/$(shell uname -r)/build M=$(dir $(abspath $(lastword $(MAKEFILE_LIST)))) modules
 
