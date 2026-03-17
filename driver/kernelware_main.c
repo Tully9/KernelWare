@@ -23,7 +23,7 @@ atomic_t open_count = ATOMIC_INIT(0);
 struct kw_state  current_state  = {0};
 struct kw_config current_config = {0};
 
-// Define the shared state here
+// Define shared struct
 struct my_driver_state drv_state = {0};
 
 
@@ -55,6 +55,21 @@ static ssize_t kw_write(struct file *file, const char __user *buf, size_t len, l
     buf_len = bytes;
     kernel_buf[bytes] = '\0';
 
+    if (kernel_buf[0] == 'A') {
+    current_state.score++;         // each allocation = score goes up
+}
+    if (kernel_buf[0] == 'F') {
+
+    if (current_state.score > 0)
+        current_state.score--;     // successful free = reduce score
+    else {
+        if (current_state.lives > 0)
+            current_state.lives--; // free with nothing = lose a life
+    }
+}
+
+
+
     data_ready = 1;
     wake_up_interruptible(&my_wq);
 
@@ -84,6 +99,10 @@ static long kw_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
                            (struct kw_config __user *)arg,
                            sizeof(struct kw_config)))
             return -EFAULT;
+
+            current_state.lives      = current_config.lives;
+            current_state.difficulty = current_config.difficulty;
+            current_state.score      = 0;
         return 0;
 
     default:
@@ -175,6 +194,10 @@ static int __init my_module_init(void)
 
 static void __exit my_module_exit(void) {
     my_proc_exit();
+    device_destroy(my_class, dev_num);
+    class_destroy(my_class);
+    cdev_del(&my_cdev);
+    unregister_chrdev_region(dev_num, 1);
     printk(KERN_INFO "KernelWare: unloaded\n");
 }
 
@@ -183,4 +206,4 @@ module_exit(my_module_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("KernelWare: HardwareIntegrated Micro-Game Engine");
-MODULE_AUTHOR("Aiden, Cathal, Raghib, Tom");
+MODULE_AUTHOR("Aidan, Cathal, Raghib, Tom");

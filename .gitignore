@@ -11,3 +11,8 @@ compile_commands.json
 .cache
 .clangd
 *.o.d
+KernelWare_Plan.xlsx
+KernelWare_Design_Document.docx
+
+# userspace compiled binaries
+/userspace/kernelware
