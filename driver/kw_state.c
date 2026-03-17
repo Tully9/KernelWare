@@ -1,0 +1,155 @@
+// Non-working atm
+
+// Needs randomised games for the kw_state_start_round().
+// Needs another randomised game that isn't the previous game for kw_state_start_round().
+
+#include <linux/slab.h>
+#include <linux/string.h>
+#include <linux/ktime.h>
+#include "kw_state.h"
+#include "kw_timer.h"
+#include "kw_games.h"
+
+struct kw_game_state game_state;
+
+void kw_state_init(void) {
+    pr_info("Initialising game state...\n");
+
+    memset(&game_state, 0, sizeof(game_state)); // clears something and then re-initalises spinlocks and waitqueus again.
+
+    spin_lock_init(&game_state.lock);
+    init_waitqueue_head(&game_state.read_queue);
+    init_waitqueue_head(&game_state.write_queue);
+
+    pr_info("Game state initialised.\n");
+}
+
+void kw_state_start_round(char playerName[16]) {
+    unsigned long flags;
+
+    pr_info("Starting new round | difficulty=%u\n", difficulty);
+
+    spin_lock_irqsave(&game_state.lock, flags);
+
+    // Reset game's state
+    game_state.username = playerName;
+    game_state.previous_game = -1;
+    game_state.current_game_id = kw_games_pick(-1);
+    kw_games_get_prompt(game_state.current_game_id, game_state.prompt, sizeof(game_state.prompt));
+    game_state.lives = 3;
+    game_state.score = 0;
+    game_state.difficulty = 1.0;
+    game_state.games_played = 0;
+    game_state.game_active = true;
+    game_state.answer_correct = false;
+    game_state.new_game_ready = true;
+
+    game_state.deadline_ns = (ktime_get_ns() + (5ULL * 1000000000ULL)) * difficulty; // 5 seconds * +10% speed-up after 3 games
+
+    wake_up_interruptible(&game_state.read_queue);
+
+    spin_unlock_irqrestore(&game_state.lock, flags);
+}
+
+void kw_state_next_game(void) {
+    unsigned long flags;
+
+    if (games_played % 3 == 0) {
+        difficulty -= 0.1;
+        pr_info("Game speeding up!");
+    }
+
+    pr_info("Next game\n");
+
+    spin_lock_irqsave(&game_state.lock, flags);
+
+    game_state.previous_game = game_state.current_game_id;
+    game_state.current_game_id = kw_games_pick(game_state.previous_game);
+    kw_games_get_prompt(game_state.current_game_id, game_state.prompt, sizeof(game_state.prompt));
+
+    game_state.answer_correct = false;
+    game_state.deadline_ns = ktime_get_ns() + (5ULL * 1000000000ULL);
+
+    game_state.new_game_ready = true;
+    wake_up_interruptible(&game_state.read_queue);
+
+    spin_unlock_irqrestore(&game_state.lock, flags);
+}
+
+void kw_state_timeout(void) {
+    unsigned long flags;
+
+    pr_info("Mini-game timed out.\n");
+
+    spin_lock_irqsave(&game_state.lock, flags);
+
+    if (game_state.lives > 0) {
+        game_state.lives--;
+        pr_info("Life lost, %u remaining\n", game_state.lives);
+
+        if (game_state.lives == 0) {
+            game_state.game_active = false;
+        }
+    }
+
+    game_state.new_game_ready = true;
+    wake_up_interruptible(&game_state.read_queue);
+
+    spin_unlock_irqrestore(&game_state.lock, flags);
+}
+
+void kw_state_reset(void) {
+    unsigned long flags;
+
+    pr_info("Resetting game state.\n");
+
+    spin_lock_irqsave(&game_state.lock, flags);
+
+    game_state.game_active = false;
+    game_state.new_game_ready = false;
+    game_state.current_game_id = 0;
+    game_state.difficulty = 1.0;
+    game_state.games_played = 0;
+    game_state.score = 0;
+    game_state.lives = 0;
+    game_state.answer_correct = false;
+    memset(game_state.username, 0, sizeof (game_state.username));
+    memset(game_state.prompt, 0, sizeof(game_state.prompt));
+    memset(game_state.answer_buffer, 0, sizeof(game_state.answer_buffer));
+
+    spin_unlock_irqrestore(&game_state.lock, flags);
+
+    pr_info("Game state reset complete\n");
+}
+
+int kw_state_get_info(char *buf, size_t size) {
+    unsigned long flags;
+    int len;
+
+    if (!buf || size == 0)
+        return -EINVAL;
+
+    spin_lock_irqsave(&game_state.lock, flags);
+
+    len = snprintf(buf, size, // writes game state info to buffer and returns to proc
+                    "Player: %s\n",
+                    "Game: %u\n",
+                    "Score: %u\n",
+                    "Lives: %u\n",
+                    "Difficulty: %u\n",
+                    "Games played: %d\n",
+                    "Active: %s\n",
+                    "Prompt: %s\n",
+                    game_state.username,
+                    game_state.current_game_id,
+                    game_state.score,
+                    game_state.lives,
+                    game_state.difficulty,
+                    game_state.games_played,
+                    game_state.game_active ? "yes" : "no",
+                    game_state.prompt);
+
+    spin_unlock_irqrestore(&game_state.lock, flags);
+
+    return len;
+}
