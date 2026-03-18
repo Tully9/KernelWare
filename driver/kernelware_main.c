@@ -2,6 +2,7 @@
 
 #include "../shared/kw_ioctl.h"
 #include "kw_driver.h"
+#include "kw_games.h"
 
 #include <linux/init.h>
 #include <linux/module.h>
@@ -14,10 +15,10 @@ static dev_t dev_num;
 static struct cdev my_cdev;
 static struct class *my_class;
 
-static DECLARE_WAIT_QUEUE_HEAD(my_wq);  // wait queue
-static int data_ready = 0;              // condition flag
-static char kernel_buf[256];
-static int buf_len = 0;
+DECLARE_WAIT_QUEUE_HEAD(my_wq);  // wait queue
+int data_ready = 0;              // condition flag
+char kernel_buf[256];
+int buf_len = 0;
 
 atomic_t open_count = ATOMIC_INIT(0);
 struct kw_state  current_state  = {0};
@@ -29,18 +30,15 @@ struct my_driver_state drv_state = {0};
 
 static ssize_t kw_read(struct file *file, char __user *buf, size_t len, loff_t *off)
 {
-    if (*off > 0) return 0;
-
     if (wait_event_interruptible(my_wq, data_ready != 0))
-        return -ERESTARTSYS;  // woken by signal not data
+        return -ERESTARTSYS;
 
     int bytes = min(len, (size_t)buf_len);
     if (copy_to_user(buf, kernel_buf, bytes))
         return -EFAULT;
 
     data_ready = 0;
-
-    *off += bytes; // advance the offset so the next call returns 0 (EOF) 
+    *off = 0;    // ← reset offset so next read() blocks again instead of returning EOF
     return bytes;
 }
 
@@ -55,19 +53,8 @@ static ssize_t kw_write(struct file *file, const char __user *buf, size_t len, l
     buf_len = bytes;
     kernel_buf[bytes] = '\0';
 
-    if (kernel_buf[0] == 'A') {
-    current_state.score++;         // each allocation = score goes up
-}
-    if (kernel_buf[0] == 'F') {
 
-    if (current_state.score > 0)
-        current_state.score--;     // successful free = reduce score
-    else {
-        if (current_state.lives > 0)
-            current_state.lives--; // free with nothing = lose a life
-    }
-}
-
+    kw_game_handle_input(kernel_buf[0]); // game by game input handling
 
 
     data_ready = 1;
@@ -77,12 +64,13 @@ static ssize_t kw_write(struct file *file, const char __user *buf, size_t len, l
 }
 
 
+
 static long kw_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 {
     switch (cmd) {
 
     case KW_IOCTL_START:
-        // no data, just start a round
+        kw_game_start(current_state.game_id);
         return 0;
 
     case KW_IOCTL_GET_STATE:
@@ -100,9 +88,9 @@ static long kw_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
                            sizeof(struct kw_config)))
             return -EFAULT;
 
-            current_state.lives      = current_config.lives;
-            current_state.difficulty = current_config.difficulty;
-            current_state.score      = 0;
+        current_state.lives      = current_config.lives;
+        current_state.difficulty = current_config.difficulty;
+        current_state.score      = 0;
         return 0;
 
     default:
@@ -130,6 +118,7 @@ static int kw_open(struct inode *inode, struct file *filp)
 
 static int kw_release(struct inode *inode, struct file *filp)
 {
+    kw_game_stop();
     atomic_dec(&open_count);
     pr_info("kernelware: closed\n");
     return 0;
@@ -193,6 +182,7 @@ static int __init my_module_init(void)
 }
 
 static void __exit my_module_exit(void) {
+    kw_game_stop();              // ← add this first
     my_proc_exit();
     device_destroy(my_class, dev_num);
     class_destroy(my_class);

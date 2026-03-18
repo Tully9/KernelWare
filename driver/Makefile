@@ -5,3 +5,11 @@ all:
 
 clean:
 	make -C /lib/modules/$(shell uname -r)/build M=$(dir $(abspath $(lastword $(MAKEFILE_LIST)))) clean
+
+reload:
+	sudo rmmod kernelware || true
+	make
+	/usr/lib/modules/$(shell uname -r)/build/scripts/sign-file \
+		sha512 signing_key.pem signing_cert.pem kernelware.ko
+	sudo insmod kernelware.ko
+	sudo dmesg | tail -5
