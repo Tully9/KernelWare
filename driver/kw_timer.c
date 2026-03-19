@@ -15,23 +15,10 @@ static bool timer_active = false;
 // checks if user answered correctly
 // updated game state (next game/ timeout)
 static enum hrtimer_restart kw_timer_callback(struct hrtimer *timer) {
-    unsigned long flags;
-    bool correct;
-
-    spin_lock_irqsave(&game_state.lock, flags);
-    correct = game_state.answer_correct;
-    spin_unlock_irqrestore(&game_state.lock, flags);
-
-    if (correct)
-        kw_state_next_game();
-    else
-        kw_state_timeout();
-
     kernel_buf[0] = KW_EVENT_TIMEOUT;
     buf_len = 1;
     data_ready = 1;
     wake_up_interruptible(&my_wq);
-
     timer_active = false;
     return HRTIMER_NORESTART;
 }
@@ -44,6 +31,23 @@ int kw_timer_init(void) {
 }
 
 // called in kw_games.c to start the countdown the mini-games
+/*
+int kw_timer_init(void) {
+    hrtimer_setup(&game_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+    game_timer.function = kw_timer_callback;
+    timer_active = false;
+    return 0;
+}
+*/
+
+// int kw_timer_init(void) {
+//     hrtimer_setup(&game_timer, kw_timer_callback, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+//     timer_active = false;
+//     pr_info("Timer initialised successfully.\n");
+//     return 0;
+// }
+
+
 int kw_timer_start(unsigned int timeout_ms) {
     ktime_t ktime_interval;
 

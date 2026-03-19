@@ -7,6 +7,9 @@
 #include "../../shared/kw_ioctl.h"
 #include "games.h"
 
+extern volatile int currentScreen;
+
+//void game_pipedream_run(int fd)
 int game_pipedream_run(int fd)
 {
     pthread_mutex_lock(&game_mutex);
@@ -20,8 +23,10 @@ int game_pipedream_run(int fd)
     game_shared.fill_percent = local_fill;
     pthread_mutex_unlock(&game_mutex);
 
+    int won = 0;
     unsigned char event;
     while (1) {
+        
         ssize_t n = read(fd, &event, 1);
         if (n <= 0) break;
 
@@ -31,7 +36,7 @@ int game_pipedream_run(int fd)
             snprintf(game_shared.subtext, 128, "Drain faster next time!");
             pthread_mutex_unlock(&game_mutex);
             sleep(2);
-            return 0;
+            break;
         }
 
         if (KW_EVENT_IS_PRESS(event)) {
@@ -48,11 +53,15 @@ int game_pipedream_run(int fd)
 
             if (local_fill == 0) {
                 ioctl(fd, KW_IOCTL_STOP);
-                return 1;
+                won = 1;
+                break;
             }
         }
     }
-    return 0;
+    ioctl(fd, KW_IOCTL_STOP);
+    sleep(2);
+    currentScreen = 0;
+    return won;
 }
 
 void game_pipedream_draw(void)  {

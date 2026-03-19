@@ -8,6 +8,9 @@ SRCS = main.c \
        games/game_pipedream.c \
        games/game_killit.c \
        games/game_hackhost.c
+       games/game_rotbrain.c \
+       games/game_killit.c \
+       games/game_memleak.c
 
 all: game
 
