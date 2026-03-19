@@ -30,23 +30,6 @@ int kw_timer_init(void) {
     return 0;
 }
 
-// called in kw_games.c to start the countdown the mini-games
-/*
-int kw_timer_init(void) {
-    hrtimer_setup(&game_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-    game_timer.function = kw_timer_callback;
-    timer_active = false;
-    return 0;
-}
-*/
-
-// int kw_timer_init(void) {
-//     hrtimer_setup(&game_timer, kw_timer_callback, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-//     timer_active = false;
-//     pr_info("Timer initialised successfully.\n");
-//     return 0;
-// }
-
 
 int kw_timer_start(unsigned int timeout_ms) {
     ktime_t ktime_interval;

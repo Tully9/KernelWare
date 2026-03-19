@@ -10,13 +10,13 @@
 
 struct kw_state {
     int game_id;
-    int score;          /* per-game use (progress %, etc.) */
-    int lives;          /* per-game use (e.g. memory leak lives) */
+    int score;          // per-game use (progress %, etc.)
+    int lives;          // per-game use (e.g. memory leak lives)
     int difficulty;
     uint64_t deadline_ns;
     char prompt[256];
-    int session_score;  /* session win count — only written by KW_IOCTL_SET_CONFIG */
-    int session_lives;  /* session lives remaining — only written by KW_IOCTL_SET_CONFIG */
+    int session_score;  // session win count — only written by KW_IOCTL_SET_CONFIG 
+    int session_lives;  // session lives remaining — only written by KW_IOCTL_SET_CONFIG 
 };
 
 struct kw_config {

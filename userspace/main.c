@@ -152,28 +152,6 @@ void* render_thread(void* arg)
     return NULL;
 }
 
-/*
-void drawGame1()
-{
-    static char prev_key = ' ';
-
-    mvprintw(4,10,"MEMORY LEAK GAME");
-    mvprintw(6,10,"A - Allocate Kernel Memory");
-    mvprintw(7,10,"F - Free Kernel Memory");
-    mvprintw(9,10,"Fix the memory leak!");
-
-    if(last_key != prev_key)
-    {
-        if(last_key == 'a')
-            write(driverFD, "A", 1);
-
-        if(last_key == 'f')
-            write(driverFD, "F", 1);
-
-        prev_key = last_key;
-    }
-}
-*/
 
 int main() {
 

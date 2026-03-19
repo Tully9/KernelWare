@@ -47,31 +47,31 @@ static int stats_show(struct seq_file *m, void *v)
 
     seq_printf(m, "\n=== %s ===\n", game_name(game_id));
     switch (game_id) {
-    case 1:  /* Pipe Dream */
+    case 1:  // Pipe Dream
         seq_printf(m, "pipe_fill:   %d%%\n", kw_game_get_fill_percent());
         break;
 
-    case 2:  /* Rot Brain */
+    case 2:  // Rot Brain 
         if (current_state.prompt[0])
             seq_printf(m, "scrambled:   %s\n", current_state.prompt);
         break;
 
-    case 3:  /* Kill It */
+    case 3:  // Kill It 
         if (current_state.prompt[0])
             seq_printf(m, "target_pid:  %s\n", current_state.prompt);
         break;
 
-    case 4:  /* Memory Leak */
+    case 4:  // Memory Leak
         seq_printf(m, "allocated:   %s\n", kw_memleak_is_allocated() ? "yes" : "no");
         seq_printf(m, "ml_lives:    %d\n", current_state.lives);
         break;
 
-    case 5:  /* Type Faster */
+    case 5:  // Type Faster
         seq_printf(m, "keypresses:  %d / %d\n",
                    kw_typefaster_get_count(), TYPEFASTER_TARGET_EXPORTED);
         break;
 
-    case 6:  /* Load Balancer */
+    case 6:  // Load Balancer
         for (i = 0; i < LB_THREAD_COUNT; i++) {
             if (kw_lb_get_alive(i))
                 seq_printf(m, "kw_lb_%d:     running (pid %d)\n",
@@ -81,7 +81,7 @@ static int stats_show(struct seq_file *m, void *v)
         }
         break;
 
-    case 7:  /* Hack the Host */
+    case 7:  // Hack the Host
         seq_printf(m, "scrambled:   %s\n", init_uts_ns.name.nodename);
         if (current_state.prompt[0])
             seq_printf(m, "original:    %s\n", current_state.prompt);

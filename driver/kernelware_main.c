@@ -45,7 +45,7 @@ static ssize_t kw_read(struct file *file, char __user *buf, size_t len, loff_t *
         return -EFAULT;
 
     data_ready = 0;
-    *off = 0;    // ← reset offset so next read() blocks again instead of returning EOF
+    *off = 0;    // reset offset so next read() blocks again instead of returning EOF
     return bytes;
 }
 
@@ -64,7 +64,7 @@ static ssize_t kw_write(struct file *file, const char __user *buf, size_t len, l
     // Hack the Host: player must type the original hostname to win
     if (current_state.game_id == 7 && buf_len >= 1) {
         if (hackhost_check_answer(kernel_buf)) {
-            kw_hackhost_win();  /* restores hostname + stops timer */
+            kw_hackhost_win();  // restores hostname + stops timer
             kernel_buf[0] = KW_EVENT_CORRECT;
         } else {
             kernel_buf[0] = 0x00;  // wrong — hostname stays scrambled

@@ -42,7 +42,7 @@ int game_hackthehost_run(int fd)
             pthread_mutex_unlock(&game_mutex);
             break;
         } else if (event == 0x00) {
-            /* wrong answer — hostname stays scrambled, let player try again */
+            // wrong answer — hostname stays scrambled, let player try again
             pthread_mutex_lock(&game_mutex);
             snprintf(game_shared.message, 300, "Wrong! Restore to: %s", state.prompt);
             snprintf(game_shared.subtext,  128, "Type the original hostname and press Enter");

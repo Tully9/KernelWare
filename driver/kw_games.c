@@ -221,13 +221,13 @@ int kw_game_start(int game_id) {
     }
 
     if (game_id == 7) {
-        /* Save original hostname */
+        // Save original hostname 
         strncpy(hack_saved_hostname, init_uts_ns.name.nodename, sizeof(hack_saved_hostname) - 1);
         hack_saved_hostname[sizeof(hack_saved_hostname) - 1] = '\0';
-        /* Put original in prompt so userspace GUI can display it as the target */
+        // Put original in prompt so userspace GUI can display it as the target 
         strncpy(current_state.prompt, hack_saved_hostname, sizeof(current_state.prompt) - 1);
         current_state.prompt[sizeof(current_state.prompt) - 1] = '\0';
-        /* Scramble the live hostname with ROT13 on letters */
+        // Scramble the live hostname with ROT13 on letters 
         {
             char scrambled[65];
             int i;
