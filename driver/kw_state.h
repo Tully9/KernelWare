@@ -14,6 +14,8 @@
 
 struct kw_game_state {
     char username[16];
+    char hostname[64]; //fake host name
+    char original_hostname[64]; //real host name
     int current_game_id;
     int score;
     int lives;

@@ -114,6 +114,30 @@ static long kw_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
         kw_state_next_game();
         return 0;
 
+	case KW_IOCTL_SET_HOSTNAME: {
+    	char name[64] = {0};
+    	if (copy_from_user(name, (char __user *)arg, sizeof(name)))
+        	return -EFAULT;
+    	name[63] = '\0';
+    	unsigned long flags;
+    	spin_lock_irqsave(&game_state.lock, flags);
+    	strncpy(game_state.hostname, name, sizeof(game_state.hostname));
+    	spin_unlock_irqrestore(&game_state.lock, flags);
+    	return 0;
+	}
+
+	case KW_IOCTL_GET_HOSTNAME: {
+    	char name[64] = {0};
+    	unsigned long flags;
+    	spin_lock_irqsave(&game_state.lock, flags);
+    	strncpy(name, game_state.original_hostname, sizeof(name));
+    	spin_unlock_irqrestore(&game_state.lock, flags);
+
+    	if (copy_to_user((char __user *)arg, name, sizeof(name)))
+        	return -EFAULT;
+    	return 0;
+	}
+
     default:
         return -ENOTTY;  // standard "not a valid ioctl" error
     }

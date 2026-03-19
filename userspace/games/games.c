@@ -10,6 +10,10 @@ void game_pipedream_draw(void);
 int  game_killit_run(int fd);
 void game_killit_draw(void);
 
+
+int  game_hackhost_run(int fd);
+void game_hackhost_draw(void);
+
 game_def_t games[] = {
     {
         .name = "PIPE DREAM - Drain the FIFO before it fills",
@@ -20,6 +24,11 @@ game_def_t games[] = {
         .name = "KILL IT - Type the PID to kill the process",
         .run  = game_killit_run,
         .draw = game_killit_draw,
+    },
+    {
+        .name = "HACK THE HOST - Rename the machine",  // add this
+        .run  = game_hackhost_run,
+        .draw = game_hackhost_draw,
     },
 };
 int num_games = sizeof(games) / sizeof(games[0]);

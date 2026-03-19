@@ -6,7 +6,8 @@ SRCS = main.c \
        input.c \
        games/games.c \
        games/game_pipedream.c \
-       games/game_killit.c
+       games/game_killit.c \
+       games/game_hackhost.c
 
 all: game
 

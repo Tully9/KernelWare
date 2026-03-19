@@ -2,6 +2,7 @@
 #include <linux/string.h>
 #include <linux/ktime.h>
 #include <linux/sched.h>
+#include <linux/utsname.h>
 #include "kw_state.h"
 #include "kw_driver.h"
 #include "kw_timer.h"
@@ -25,6 +26,17 @@ void kw_state_init(void) {
 // called in kw_games.c to advance player to the next game before the time runs out
 void kw_state_start_round(char playerName[16]) { // usernames aren't implemented yet - might do leaderboard if we've time
     unsigned long flags;
+
+    strncpy(game_state.hostname, "kernelware-machine", sizeof(game_state.hostname));
+
+    strncpy(game_state.original_hostname,
+        utsname()->nodename,
+        sizeof(game_state.original_hostname));
+    game_state.original_hostname[sizeof(game_state.original_hostname) - 1] = '\0';
+
+    // scrambles hostname
+    snprintf(game_state.hostname, sizeof(game_state.hostname),
+             "hacked-%s", game_state.original_hostname);
 
     pr_info("Starting new round | difficulty=%d\n", game_state.difficulty);
 
@@ -128,8 +140,9 @@ int kw_state_get_info(char *buf, size_t size) { // not called in the project any
     spin_lock_irqsave(&game_state.lock, flags);
 
     len = snprintf(buf, size, // writes game state info to buffer and returns to proc
-                    "Player: %s\nGame: %d\nScore: %d\nLives: %d\nGames played: %d\nActive: %s\nPrompt: %s\n",
+                    "Player: %s\nHostname: %s\nGame: %d\nScore: %d\nLives: %d\nGames played: %d\nActive: %s\nPrompt: %s\n",
                     game_state.username,
+                    game_state.hostname,
                     game_state.current_game_id,
                     game_state.score,
                     game_state.lives,

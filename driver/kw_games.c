@@ -45,8 +45,8 @@ static int pipe_writer_fn(void *data) { // not called in the project anywhere ye
 }
 
 int kw_games_pick(int prev) {
-    int ids[] = {1, 2};
-    int n = 2;
+    int ids[] = {1, 2, 3};
+    int n = 3;
     int pick;
     do {
         pick = ids[get_random_u32() % n];
