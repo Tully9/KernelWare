@@ -96,7 +96,7 @@ void *game_manager_thread(void *arg) {
             ioctl(driverFD, KW_IOCTL_GET_STATE, &state);
             game_id = state.game_id;
             if (game_id < 1 || game_id > num_games) break;
-            ioctl(driverFD, KW_IOCTL_START, game_id);
+        ioctl(driverFD, KW_IOCTL_START, 0); // 0 for random game
         }
 
         // game over — wait for any key to return to start

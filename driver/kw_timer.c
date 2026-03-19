@@ -12,23 +12,10 @@ static struct hrtimer game_timer;
 static bool timer_active = false;
 
 static enum hrtimer_restart kw_timer_callback(struct hrtimer *timer) {
-    unsigned long flags;
-    bool correct;
-
-    spin_lock_irqsave(&game_state.lock, flags);
-    correct = game_state.answer_correct;
-    spin_unlock_irqrestore(&game_state.lock, flags);
-
-    if (correct)
-        kw_state_next_game();
-    else
-        kw_state_timeout();
-
     kernel_buf[0] = KW_EVENT_TIMEOUT;
     buf_len = 1;
     data_ready = 1;
     wake_up_interruptible(&my_wq);
-
     timer_active = false;
     return HRTIMER_NORESTART;
 }

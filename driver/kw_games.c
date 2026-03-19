@@ -37,8 +37,18 @@ static int pipe_writer_fn(void *data) {
         msleep(FILL_INTERVAL);
         if (kthread_should_stop())
             break;
-        kernel_buf[0] = FILL_BYTE;
-        buf_len = 1;
+
+        if (fill_count >= PIPE_BUF_MAX) {
+            kernel_buf[0] = KW_EVENT_TIMEOUT;
+            buf_len = 1;
+            fill_count = 0;
+        } else {
+            fill_count++;
+            kernel_buf[0] = FILL_BYTE;
+            buf_len = 1;
+            current_state.score = (fill_count * 100) / PIPE_BUF_MAX;
+        }
+
         data_ready = 1;
         wake_up_interruptible(&my_wq);
     }
@@ -153,12 +163,8 @@ void pipe_drain(void)
     if (fill_count < 0)
         fill_count = 0;
 
-    kernel_buf[0] = FILL_BYTE;
-    buf_len = 1;
-    data_ready = 1;
-    wake_up_interruptible(&my_wq);
+    current_state.score = (fill_count * 100) / PIPE_BUF_MAX;
 }
-
 
 void kw_game_handle_input(unsigned char event)
 {
