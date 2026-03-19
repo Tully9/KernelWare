@@ -4,10 +4,10 @@ game_shared_t game_shared = {0};
 pthread_mutex_t game_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
-void game_pipedream_run(int fd);
+int  game_pipedream_run(int fd);
 void game_pipedream_draw(void);
 
-void game_killit_run(int fd);
+int  game_killit_run(int fd);
 void game_killit_draw(void);
 
 game_def_t games[] = {
