@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <linux/input.h>
 #include <stdlib.h>
+#include <termios.h>
 #include "../shared/kw_ioctl.h"
 
 static int drv_fd = -1;
@@ -47,6 +48,48 @@ static struct nav_mapping navmap[] = {
 static int navmap_size = sizeof(navmap) / sizeof(navmap[0]);
 
 
+static int kw_getch(void)
+{
+    struct termios old, raw;
+    unsigned char c;
+    tcgetattr(STDIN_FILENO, &old);
+    raw = old;
+    raw.c_lflag &= ~(ICANON | ECHO);
+    raw.c_cc[VMIN] = 1;
+    raw.c_cc[VTIME] = 0;
+    tcsetattr(STDIN_FILENO, TCSANOW, &raw);
+    read(STDIN_FILENO, &c, 1);
+    tcsetattr(STDIN_FILENO, TCSANOW, &old);
+    return c;
+}
+
+// logic to manage user ssh input
+static void ssh_input_loop(void)
+{
+    while (1) {
+        int c = kw_getch();
+
+        for (int i = 0; i < keymap_size; i++) {
+            if (keymap[i].character == c) {
+                last_key = c;
+                if (drv_fd >= 0) {
+                    unsigned char event_byte = KW_EVENT_BTN(keymap[i].btn_index);
+                    if (write(drv_fd, &event_byte, 1) < 0)
+                        perror("input: write to driver");
+                }
+                break;
+            }
+        }
+
+        for (int i = 0; i < navmap_size; i++) {
+            if (c == ('0' + navmap[i].screen)) {
+                currentScreen = navmap[i].screen;
+                break;
+            }
+        }
+    }
+}
+
 void *kw_input_thread(void *arg) // arg isn't used but compiler will give a waring as in pthread signature
 {
     (void)arg;
@@ -59,8 +102,7 @@ void *kw_input_thread(void *arg) // arg isn't used but compiler will give a wari
 
     int kbd_fd = open(kbd_dev, O_RDONLY);
     if (kbd_fd < 0) {
-        perror("input: failed to open keyboard device");
-        fprintf(stderr, "Hint: set KW_KBD_DEV=/dev/input/eventX\n");
+        ssh_input_loop();
         return NULL;
     }
 

@@ -5,4 +5,20 @@
 
 ---
 
+## Setup
+
+```bash
+cd driver/
+make
+cd ..
+
+cd scripts/
+sudo bash load.sh
+cd ..
+
+cd userspace/
+make
+./game
+```
+
 Dr. Mark Burkley Project making a Linux Kernel Module (LKM.)

@@ -3,6 +3,8 @@
 #include <linux/wait.h>
 #include <linux/sched.h>
 #include <linux/err.h>
+#include <linux/random.h>
+#include <linux/string.h>
 #include "../shared/kw_ioctl.h"
 #include "kw_games.h"
 #include "kw_driver.h"
@@ -45,6 +47,14 @@ static int pipe_writer_fn(void *data) {
 
 int kw_game_start(int game_id) {
     active_game_id = game_id;
+
+    if (game_id == 3) {
+        u32 pid = get_random_u32() % 65534 + 1;
+        snprintf(current_state.prompt, sizeof(current_state.prompt), "%u", pid);
+        current_state.score = 0;
+        return 0;
+    }
+
     fill_count = 0;
     reinit_completion(&pipe_done);
     pipe_thread = kthread_run(pipe_writer_fn, NULL, "kw_pipe_writer");
@@ -101,6 +111,18 @@ void kw_game_handle_input(unsigned char event)
             else if (current_state.lives > 0)
                 current_state.lives--;
         }
+        break;
+
+    case 3:  // kill it -> compare typed PID to prompt
+        if (strcmp(kernel_buf, current_state.prompt) == 0) {
+            current_state.score++;
+            u32 pid = get_random_u32() % 65534 + 1;
+            snprintf(current_state.prompt, sizeof(current_state.prompt), "%u", pid);
+            kernel_buf[0] = 0x01;
+        } else {
+            kernel_buf[0] = 0x00;
+        }
+        buf_len = 1;
         break;
     }
 }

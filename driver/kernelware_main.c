@@ -72,7 +72,7 @@ static long kw_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
     switch (cmd) {
 
     case KW_IOCTL_START:
-        current_state.game_id = 1;
+        current_state.game_id = (int)arg;
         kw_game_start(current_state.game_id);
         return 0;
 
