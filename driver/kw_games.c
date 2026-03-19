@@ -19,7 +19,7 @@
 #define FILL_BYTE 0xBB
 #define FILL_INTERVAL 200
 #define TYPEFASTER_TARGET 20
-#define LB_THREAD_COUNT 3
+/* LB_THREAD_COUNT is defined in kw_games.h */
 
 static DECLARE_COMPLETION(pipe_done);
 static struct task_struct *pipe_thread;
@@ -103,7 +103,13 @@ unsigned char lb_kill_thread(const char *input)
 
 
 // Hack the Host
-void kw_hackhost_win(void) { hack_won = true; }
+void kw_hackhost_win(void)
+{
+    /* Restore the original hostname and stop the timer */
+    hackhost_change(hack_saved_hostname, strlen(hack_saved_hostname));
+    kw_timer_stop();
+    hack_won = true;
+}
 
 int hackhost_change(const char *new_name, int len)
 {
@@ -215,9 +221,30 @@ int kw_game_start(int game_id) {
     }
 
     if (game_id == 7) {
+        /* Save original hostname */
         strncpy(hack_saved_hostname, init_uts_ns.name.nodename, sizeof(hack_saved_hostname) - 1);
         hack_saved_hostname[sizeof(hack_saved_hostname) - 1] = '\0';
+        /* Put original in prompt so userspace GUI can display it as the target */
         strncpy(current_state.prompt, hack_saved_hostname, sizeof(current_state.prompt) - 1);
+        current_state.prompt[sizeof(current_state.prompt) - 1] = '\0';
+        /* Scramble the live hostname with ROT13 on letters */
+        {
+            char scrambled[65];
+            int i;
+            for (i = 0; i < __NEW_UTS_LEN && hack_saved_hostname[i]; i++) {
+                char c = hack_saved_hostname[i];
+                if (c >= 'a' && c <= 'z')
+                    scrambled[i] = 'a' + (c - 'a' + 13) % 26;
+                else if (c >= 'A' && c <= 'Z')
+                    scrambled[i] = 'A' + (c - 'A' + 13) % 26;
+                else
+                    scrambled[i] = c;
+            }
+            scrambled[i] = '\0';
+            strncpy(init_uts_ns.name.nodename, scrambled, __NEW_UTS_LEN);
+            init_uts_ns.name.nodename[__NEW_UTS_LEN] = '\0';
+        }
+        hack_won = false;
         kw_timer_start(timer_duration_ms);
         return 0;
     }
@@ -288,10 +315,22 @@ void pipe_drain(void)
     current_state.score = (fill_count * 100) / PIPE_BUF_MAX;
 }
 
-// call in kernelware_main.c and processes a button press in "kw_write" for the kill it mini-game
-// void kw_game_handle_input(unsigned char event) {
-//     current_state.score = (fill_count * 100) / PIPE_BUF_MAX;
-// }
+int kw_game_get_fill_percent(void)
+{
+    return (fill_count * 100) / PIPE_BUF_MAX;
+}
+
+bool kw_lb_get_alive(int idx)
+{
+    if (idx < 0 || idx >= LB_THREAD_COUNT)
+        return false;
+    return lb_alive[idx];
+}
+
+int hackhost_check_answer(const char *input)
+{
+    return strcmp(input, hack_saved_hostname) == 0;
+}
 
 void kw_game_handle_input(unsigned char event)
 {

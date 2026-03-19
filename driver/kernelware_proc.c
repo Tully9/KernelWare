@@ -2,6 +2,7 @@
 #include <linux/seq_file.h>
 #include "kernelware.h"
 #include "kw_driver.h"
+#include "kw_games.h"
 
 #define PROC_DIR_NAME  "kernelware"
 #define PROC_STATS_NAME     "stats"
@@ -27,15 +28,36 @@ static const char *game_name(int id)
 
 static int stats_show(struct seq_file *m, void *v)
 {
+    int game_id = current_state.game_id;
+
     seq_printf(m, "open_count:  %d\n", drv_state.open_count);
     seq_printf(m, "read_count:  %d\n", drv_state.read_count);
     seq_printf(m, "write_count: %d\n", drv_state.write_count);
-    seq_printf(m, "game:        %s (%d)\n",
-               game_name(current_state.game_id), current_state.game_id);
+    seq_printf(m, "game:        %s (%d)\n", game_name(game_id), game_id);
     seq_printf(m, "score:       %d\n", current_state.score);
     seq_printf(m, "lives:       %d\n", current_state.lives);
-    if (current_state.prompt[0])
-        seq_printf(m, "prompt:      %s\n", current_state.prompt);
+
+    switch (game_id) {
+    case 1:  /* Pipe Dream */
+        seq_printf(m, "pipe_fill:   %d%%\n", kw_game_get_fill_percent());
+        break;
+    case 3:  /* Kill It */
+        if (current_state.prompt[0])
+            seq_printf(m, "target_pid:  %s\n", current_state.prompt);
+        break;
+    case 6:  /* Load Balancer */ {
+        int i;
+        seq_printf(m, "lb_threads:\n");
+        for (i = 0; i < LB_THREAD_COUNT; i++)
+            seq_printf(m, "  kw_lb_%d:   %s\n", i + 1,
+                       kw_lb_get_alive(i) ? "running" : "dead");
+        break;
+    }
+    default:
+        if (current_state.prompt[0])
+            seq_printf(m, "prompt:      %s\n", current_state.prompt);
+        break;
+    }
     return 0;
 }
 

@@ -16,8 +16,8 @@ int game_hackthehost_run(int fd)
     ioctl(fd, KW_IOCTL_GET_STATE, &state);
 
     pthread_mutex_lock(&game_mutex);
-    snprintf(game_shared.message, 300, "Current hostname: %s", state.prompt);
-    snprintf(game_shared.subtext,  128, "Type a new hostname and press Enter");
+    snprintf(game_shared.message, 300, "HOSTNAME SCRAMBLED! Restore to: %s", state.prompt);
+    snprintf(game_shared.subtext,  128, "Type the original hostname and press Enter");
     game_shared.typed[0]  = '\0';
     game_shared.typed_len = 0;
     pthread_mutex_unlock(&game_mutex);
@@ -30,7 +30,7 @@ int game_hackthehost_run(int fd)
 
         if (event == KW_EVENT_CORRECT) {
             pthread_mutex_lock(&game_mutex);
-            snprintf(game_shared.message, 300, "Hostname hacked! Run: hostname");
+            snprintf(game_shared.message, 300, "Hostname restored! Well done.");
             game_shared.subtext[0] = '\0';
             pthread_mutex_unlock(&game_mutex);
             won = 1;
@@ -41,6 +41,14 @@ int game_hackthehost_run(int fd)
             game_shared.subtext[0] = '\0';
             pthread_mutex_unlock(&game_mutex);
             break;
+        } else if (event == 0x00) {
+            /* wrong answer — hostname stays scrambled, let player try again */
+            pthread_mutex_lock(&game_mutex);
+            snprintf(game_shared.message, 300, "Wrong! Restore to: %s", state.prompt);
+            snprintf(game_shared.subtext,  128, "Type the original hostname and press Enter");
+            game_shared.typed[0]  = '\0';
+            game_shared.typed_len = 0;
+            pthread_mutex_unlock(&game_mutex);
         }
     }
 
@@ -62,6 +70,6 @@ void game_hackthehost_draw(void)
     mvprintw(7,  10, "=== HACK THE HOST ===");
     mvprintw(9,  10, "%-50s", msg);
     mvprintw(10, 10, "%-50s", sub);
-    mvprintw(12, 10, "New hostname: %s_", typed);
+    mvprintw(12, 10, "Your answer: %s_", typed);
     mvprintw(14, 10, "[a-z/0-9/-] type | [Enter] submit | [Backspace] delete");
 }

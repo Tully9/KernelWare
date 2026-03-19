@@ -83,6 +83,10 @@ void *game_manager_thread(void *arg) {
             int score     = game_shared.score;
             pthread_mutex_unlock(&game_mutex);
 
+            /* sync session score/lives into kernel so /proc/kernelware/stats reflects them */
+            struct kw_config sync_cfg = { .lives = remaining, .score = score };
+            ioctl(driverFD, KW_IOCTL_SET_CONFIG, &sync_cfg);
+
             if (!won && remaining <= 0) break;
 
             // speed up timer by 10% every 3 wins

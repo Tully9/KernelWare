@@ -21,6 +21,7 @@ struct kw_config {
     int timeout_ms;
     int difficulty;
     int lives;
+    int score;
 };
 
 struct kw_stats {

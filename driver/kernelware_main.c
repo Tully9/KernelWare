@@ -61,15 +61,17 @@ static ssize_t kw_write(struct file *file, const char __user *buf, size_t len, l
     buf_len = bytes;
     kernel_buf[bytes] = '\0';
 
-    // Hack the Host: player types a new hostname
+    // Hack the Host: player must type the original hostname to win
     if (current_state.game_id == 7 && buf_len >= 1) {
-        if (hackhost_change(kernel_buf, buf_len)) {
-            kw_hackhost_win();
+        if (hackhost_check_answer(kernel_buf)) {
+            kw_hackhost_win();  /* restores hostname + stops timer */
             kernel_buf[0] = KW_EVENT_CORRECT;
-            buf_len = 1;
-            data_ready = 1;
-            wake_up_interruptible(&my_wq);
+        } else {
+            kernel_buf[0] = 0x00;  // wrong — hostname stays scrambled
         }
+        buf_len = 1;
+        data_ready = 1;
+        wake_up_interruptible(&my_wq);
         return bytes;
     }
 
@@ -143,7 +145,7 @@ static long kw_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 
         current_state.lives      = current_config.lives;
         current_state.difficulty = current_config.difficulty;
-        current_state.score      = 0;
+        current_state.score      = current_config.score;
         return 0;
 
     case KW_IOCTL_SUBMIT_SCORE: {

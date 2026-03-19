@@ -1,6 +1,8 @@
 #ifndef KW_GAMES_H
 #define KW_GAMES_H
 
+#define LB_THREAD_COUNT 3
+
 int kw_game_start(int game_id);
 void kw_game_stop(void);
 void kw_set_timer_ms(unsigned int ms);
@@ -19,6 +21,11 @@ int kw_games_pick(int prev);
 unsigned char lb_kill_thread(const char *input);
 int hackhost_change(const char *new_name, int len);
 void kw_hackhost_win(void);
+int hackhost_check_answer(const char *input);
+
+// Proc accessors
+int kw_game_get_fill_percent(void);
+bool kw_lb_get_alive(int idx);
 
 
 #endif
