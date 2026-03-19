@@ -2,14 +2,18 @@
 
 #include "../shared/kw_ioctl.h"
 #include "kw_driver.h"
+#include "kw_state.h"
 #include "kw_games.h"
+#include "kw_timer.h"
 
 #include <linux/init.h>
+#include <linux/ktime.h>
 #include <linux/module.h>
 #include <linux/fs.h>
 #include <linux/cdev.h>
 #include <linux/wait.h>
 #include <linux/sched.h>
+#include <linux/hrtimer.h>
 
 static dev_t dev_num;
 static struct cdev my_cdev;
@@ -55,14 +59,18 @@ static ssize_t kw_write(struct file *file, const char __user *buf, size_t len, l
     buf_len = bytes;
     kernel_buf[bytes] = '\0';
 
-    if (current_state.game_id == 2 && buf_len > 1) {
-        if (rotbrain_check_answer(kernel_buf)) {
+    //FOR TEXT INPUTS
+    if ((current_state.game_id == 2 || current_state.game_id == 3) && buf_len > 1) {
+        int correct = (current_state.game_id == 2)
+                  ? rotbrain_check_answer(kernel_buf)
+                  : (strcmp(kernel_buf, current_state.prompt) == 0);
+
+        if (correct) {
             kernel_buf[0] = KW_EVENT_CORRECT;
             buf_len = 1;
             data_ready = 1;
             wake_up_interruptible(&my_wq);
         }
-        // wrong answer - do nothing, let player keep trying
         return bytes;
     }
 
@@ -84,13 +92,26 @@ static long kw_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
         kw_game_start(current_state.game_id);
         return 0;
 
-    case KW_IOCTL_GET_STATE:
-        // copy state struct to userspace
-        if (copy_to_user((struct kw_state __user *)arg,
-                         &current_state,
-                         sizeof(struct kw_state)))
+    case KW_IOCTL_STOP:
+        kw_game_stop();
+        kw_state_next_game();
+        return 0;
+
+    case KW_IOCTL_SET_DIFF:
+        kw_set_timer_ms((unsigned int)arg);
+        return 0;
+
+    case KW_IOCTL_GET_STATE: {
+        struct kw_state s = current_state;
+        u64 now = ktime_get_ns();
+        if (s.deadline_ns > now)
+            s.score = (int)(100 - ((s.deadline_ns - now) * 100 / ((u64)timer_duration_ms * 1000000ULL)));
+        else
+            s.score = 100;
+        if (copy_to_user((struct kw_state __user *)arg, &s, sizeof(s)))
             return -EFAULT;
         return 0;
+    }
 
     case KW_IOCTL_SET_CONFIG:
         // copy config struct from userspace
@@ -103,10 +124,11 @@ static long kw_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
         current_state.difficulty = current_config.difficulty;
         current_state.score      = 0;
         return 0;
-
+/*
     case KW_IOCTL_STOP:
         kw_game_stop();
-        return 0;
+        return 1;
+*/  
     default:
         return -ENOTTY;  // standard "not a valid ioctl" error
     }
@@ -193,12 +215,15 @@ static int __init my_module_init(void)
         return -1;
     }
 
+    kw_timer_init();
+    kw_state_init();
     pr_info("KernelWare: loaded\n");
     return 0;
 }
 
 static void __exit my_module_exit(void) {
-    kw_game_stop();              // ← add this first
+    kw_game_stop();
+    kw_timer_exit();
     my_proc_exit();
     device_destroy(my_class, dev_num);
     class_destroy(my_class);

@@ -1,6 +1,7 @@
 {
     "files.exclude": {
         "driver/*.o": true,
+        "driver/*.d": true,
         "driver/*.ko": true,
         "driver/*.mod": true,
         "driver/*.mod.c": true,

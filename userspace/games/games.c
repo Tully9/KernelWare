@@ -4,11 +4,14 @@ game_shared_t game_shared = {0};
 pthread_mutex_t game_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
-void game_pipedream_run(int fd);
+int  game_pipedream_run(int fd);
 void game_pipedream_draw(void);
 
-void game_rotbrain_run(int fd);
+int game_rotbrain_run(int fd);
 void game_rotbrain_draw(void);
+
+int game_killit_run(int fd);
+void game_killit_draw(void);
 
 game_def_t games[] = {
     {
@@ -22,6 +25,12 @@ game_def_t games[] = {
         .input_mode = INPUT_MODE_TEXT,
         .run  = game_rotbrain_run,
         .draw = game_rotbrain_draw,
+    },
+    {
+        .name = "KILL IT - Type the PID to kill the process",
+        .input_mode = INPUT_MODE_TEXT,
+        .run  = game_killit_run,
+        .draw = game_killit_draw,
     },
 };
 int num_games = sizeof(games) / sizeof(games[0]);
