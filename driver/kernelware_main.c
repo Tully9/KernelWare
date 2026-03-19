@@ -60,13 +60,13 @@ static ssize_t kw_write(struct file *file, const char __user *buf, size_t len, l
     kernel_buf[bytes] = '\0';
 
 	//FOR TEXT INPUTS
-	if ((current_state.game_id == 2 || current_state.game_id == 3 || current_state.game_id == 5) && buf_len > 1) {
+	if ((current_state.game_id == 2 || current_state.game_id == 3 || current_state.game_id == 7) && buf_len > 1) {
     	int correct = 0;
     	if (current_state.game_id == 2)
         	correct = rotbrain_check_answer(kernel_buf);
     	else if (current_state.game_id == 3)
         	correct = (strcmp(kernel_buf, current_state.prompt) == 0);
-    	else if (current_state.game_id == 5)
+    	else if (current_state.game_id == 7)
         	correct = (strcmp(kernel_buf, game_state.original_hostname) == 0);
 
     	if (correct) {

@@ -13,7 +13,6 @@ void game_rotbrain_draw(void);
 int  game_killit_run(int fd);
 void game_killit_draw(void);
 
-
 int  game_hackhost_run(int fd);
 void game_hackhost_draw(void);
 

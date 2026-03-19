@@ -148,7 +148,7 @@ int kw_game_start(int game_id) {
     return 0;
     }
 
-    if (game_id == 6) {
+    if (game_id == 7) {
         kw_timer_start(timer_duration_ms);
         return 0;
     }
@@ -165,8 +165,8 @@ int kw_game_start(int game_id) {
 }
 
 int kw_games_pick(int prev) {
-    int ids[] = {1, 2, 3, 4, 5, 6};
-    int n = 6;
+    int ids[] = {1, 2, 3, 4, 5, 6, 7};
+    int n = 7;
     int pick;
     do {
         pick = ids[get_random_u32() % n];
