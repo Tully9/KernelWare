@@ -21,7 +21,6 @@ int game_rotbrain_run(int fd)
     pthread_mutex_lock(&game_mutex);
     snprintf(game_shared.message, 128, "DECODE: %.119s", state.prompt);
     snprintf(game_shared.subtext, 128, "Type the original word and press Enter");
-    game_shared.score = 0;
     game_shared.typed[0] = '\0';
     game_shared.typed_len = 0;
     pthread_mutex_unlock(&game_mutex);
@@ -47,7 +46,7 @@ int game_rotbrain_run(int fd)
     }
 
     ioctl(fd, KW_IOCTL_STOP);
-    sleep(2);
+    sleep(1);
     currentScreen = 0;
     return won;
 }
@@ -63,10 +62,10 @@ void game_rotbrain_draw(void)
     int score = game_shared.score;
     pthread_mutex_unlock(&game_mutex);
 
-    mvprintw(4, 10, "=== ROT-BRAIN ===");
-    mvprintw(6, 10, "%s", msg);
-    mvprintw(8, 10, "Your answer: %s_", typed);
-    mvprintw(10, 10, "%s", sub);
-    mvprintw(12, 10, "Score: %d", score);
-    mvprintw(14, 10, "[A-Z] type | [Enter] submit | [Backspace] delete");
+    mvprintw(7,  10, "=== ROT-BRAIN ===");
+    mvprintw(9,  10, "%s", msg);
+    mvprintw(11, 10, "Your answer: %s_", typed);
+    mvprintw(13, 10, "%s", sub);
+    mvprintw(15, 10, "Score: %d", score);
+    mvprintw(17, 10, "[A-Z] type | [Enter] submit | [Backspace] delete");
 }

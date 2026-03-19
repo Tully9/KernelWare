@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <signal.h>
+#include <sys/wait.h>
 #include <pthread.h>
 #include <ncurses.h>
 #include <sys/ioctl.h>
@@ -12,14 +14,22 @@ extern volatile int currentScreen;
 
 int game_killit_run(int fd)
 {
-    //ioctl(fd, KW_IOCTL_START, 3);
+    // Spawn a real child process to be killed
+    pid_t child = fork();
+    if (child == 0) {
+        // Child: sleep until killed
+        while (1) pause();
+        _exit(0);
+    }
 
-    struct kw_state state;
-    memset(&state, 0, sizeof(state));
-    ioctl(fd, KW_IOCTL_GET_STATE, &state);
+    char pid_str[32];
+    snprintf(pid_str, sizeof(pid_str), "%d", (int)child);
+
+    // Tell the driver what PID to validate against
+    ioctl(fd, KW_IOCTL_SET_PROMPT, pid_str);
 
     pthread_mutex_lock(&game_mutex);
-    snprintf(game_shared.message, 300, "KILL PID: %s", state.prompt);
+    snprintf(game_shared.message, 300, "KILL PID: %s", pid_str);
     snprintf(game_shared.subtext,  128, "Type the PID and press Enter");
     game_shared.typed[0] = '\0';
     game_shared.typed_len = 0;
@@ -32,15 +42,19 @@ int game_killit_run(int fd)
         if (n <= 0) break;
 
         if (event == KW_EVENT_CORRECT) {
+            kill(child, SIGKILL);
+            waitpid(child, NULL, 0);
             pthread_mutex_lock(&game_mutex);
-            snprintf(game_shared.message, 300, "CORRECT! PID eliminated.");
+            snprintf(game_shared.message, 300, "CORRECT! PID %s eliminated.", pid_str);
             game_shared.subtext[0] = '\0';
             pthread_mutex_unlock(&game_mutex);
             won = 1;
             break;
         } else if (event == KW_EVENT_TIMEOUT) {
+            kill(child, SIGKILL);
+            waitpid(child, NULL, 0);
             pthread_mutex_lock(&game_mutex);
-            snprintf(game_shared.message, 300, "TIME'S UP!");
+            snprintf(game_shared.message, 300, "TIME'S UP! PID %s escaped.", pid_str);
             game_shared.subtext[0] = '\0';
             pthread_mutex_unlock(&game_mutex);
             break;
@@ -48,7 +62,7 @@ int game_killit_run(int fd)
     }
 
     ioctl(fd, KW_IOCTL_STOP);
-    sleep(2);
+    sleep(1);
     currentScreen = 0;
     return won;
 }
@@ -65,7 +79,6 @@ void game_killit_draw(void)
     mvprintw(7,  10, "=== KILL IT ===");
     mvprintw(9,  10, "%-40s", msg);
     mvprintw(10, 10, "%-40s", sub);
-    mvprintw(12, 10, "Type the PID and press Enter");
     mvprintw(12, 10, "Your input: %s_", typed);
     mvprintw(14, 10, "[0-9] type | [Enter] submit | [Backspace] delete");
 }

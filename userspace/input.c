@@ -85,7 +85,6 @@ static int kw_getch(void)
 static void ssh_input_loop(void)
 {
     while (1) {
-        // yield stdin to the game when it's handling its own input (e.g. kill-it)
         if (input_active) { usleep(10000); continue; }
 
         int c = kw_getch();
@@ -95,15 +94,56 @@ static void ssh_input_loop(void)
             continue;
         }
 
-        for (int i = 0; i < keymap_size; i++) {
-            if (keymap[i].character == c) {
-                last_key = c;
-                if (drv_fd >= 0) {
-                    unsigned char event_byte = KW_EVENT_BTN(keymap[i].btn_index);
-                    if (write(drv_fd, &event_byte, 1) < 0)
-                        perror("input: write to driver");
+        int game_idx = currentScreen - 1;
+        input_mode_t mode = (game_idx >= 0 && game_idx < num_games)
+            ? games[game_idx].input_mode : INPUT_MODE_BUTTONS;
+
+        if (mode == INPUT_MODE_TEXT) {
+            if (c == '\n' || c == '\r') {
+                pthread_mutex_lock(&game_mutex);
+                int len = game_shared.typed_len;
+                char to_send[64];
+                memcpy(to_send, game_shared.typed, len);
+                pthread_mutex_unlock(&game_mutex);
+
+                if (len > 0 && drv_fd >= 0)
+                    write(drv_fd, to_send, len);
+
+                pthread_mutex_lock(&game_mutex);
+                memset(game_shared.typed, 0, sizeof(game_shared.typed));
+                game_shared.typed_len = 0;
+                pthread_mutex_unlock(&game_mutex);
+            } else if (c == '\x7f' || c == '\x08') {
+                pthread_mutex_lock(&game_mutex);
+                if (game_shared.typed_len > 0) {
+                    game_shared.typed_len--;
+                    game_shared.typed[game_shared.typed_len] = '\0';
                 }
-                break;
+                pthread_mutex_unlock(&game_mutex);
+            } else {
+                for (int i = 0; i < keymap_size; i++) {
+                    if (keymap[i].character != (char)c)
+                        continue;
+                    pthread_mutex_lock(&game_mutex);
+                    if (game_shared.typed_len < (int)sizeof(game_shared.typed) - 1) {
+                        game_shared.typed[game_shared.typed_len++] = (char)c;
+                        game_shared.typed[game_shared.typed_len]   = '\0';
+                    }
+                    pthread_mutex_unlock(&game_mutex);
+                    break;
+                }
+            }
+        } else {
+            for (int i = 0; i < keymap_size; i++) {
+                if (keymap[i].character == c) {
+                    last_key = c;
+                    if (drv_fd >= 0) {
+                        unsigned char event_byte = KW_EVENT_BTN(keymap[i].btn_index);
+                        if (write(drv_fd, &event_byte, 1) < 0)
+                            perror("input: write to driver");
+                    }
+                    break;
+                }
             }
         }
     }

@@ -17,12 +17,14 @@
 #define PIPE_BUF_MAX ((int)(sizeof(kernel_buf) - 1))
 #define FILL_BYTE 0xBB
 #define FILL_INTERVAL 200
+#define TYPEFASTER_TARGET 20  // type faster, goal amount
 
 static DECLARE_COMPLETION(pipe_done);
 static struct task_struct *pipe_thread;
 static int active_game_id;
 unsigned int timer_duration_ms = 10000;
 static void *memleak_ptr = NULL;
+static int typefaster_count = 0; // type faster
 
 static int fill_count = 0; // pipe dream
 
@@ -60,6 +62,7 @@ static int pipe_writer_fn(void *data) {
     complete(&pipe_done);
     return 0;
 }
+
 
 //Rot Brain
 static void rotbrain_apply(const char *input, char *output, int n)
@@ -125,8 +128,7 @@ int kw_game_start(int game_id) {
     }
 
     if (game_id == 3) {
-        u32 pid = get_random_u32() % 65534 + 1;
-        snprintf(current_state.prompt, sizeof(current_state.prompt), "%u", pid);
+        current_state.prompt[0] = '\0';  // userspace sets the real PID via KW_IOCTL_SET_PROMPT
         kw_timer_start(timer_duration_ms);
         return 0;
     }
@@ -137,6 +139,14 @@ int kw_game_start(int game_id) {
     }
 
     if (game_id == 5) {
+    typefaster_count = 0;
+    current_state.score = 0;
+    current_state.prompt[0] = '\0';
+    kw_timer_start(timer_duration_ms);
+    return 0;
+    }
+
+    if (game_id == 6) {
         kw_timer_start(timer_duration_ms);
         return 0;
     }
@@ -153,8 +163,8 @@ int kw_game_start(int game_id) {
 }
 
 int kw_games_pick(int prev) {
-    int ids[] = {1, 2, 3, 4, 5};
-    int n = 5;
+    int ids[] = {1, 2, 3, 4, 5, 6};
+    int n = 6;
     int pick;
     do {
         pick = ids[get_random_u32() % n];
@@ -232,5 +242,17 @@ void kw_game_handle_input(unsigned char event)
         data_ready = 1;
         wake_up_interruptible(&my_wq);
         break;
+
+        case 5 : //type faster
+            typefaster_count++;
+            current_state.score = (typefaster_count * 100) / TYPEFASTER_TARGET;
+            if (current_state.score > 100) current_state.score = 100;
+            if (typefaster_count >= TYPEFASTER_TARGET)
+            game_state.answer_correct = true;
+            kernel_buf[0] = (unsigned char)(current_state.score & 0xFF);
+            buf_len = 1;
+            data_ready = 1;
+            wake_up_interruptible(&my_wq);
+            break;
     }
 }

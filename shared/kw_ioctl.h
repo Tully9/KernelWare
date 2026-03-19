@@ -56,6 +56,7 @@ struct kw_stats {
 #define KW_IOCTL_GET_STATS     _IOR(KW_MAGIC, 6, struct kw_stats)
 #define KW_IOCTL_GET_STATE     _IOR(KW_MAGIC, 7, struct kw_state)
 #define KW_IOCTL_RESET_SCORE   _IO (KW_MAGIC, 8)
+#define KW_IOCTL_SET_PROMPT    _IOW(KW_MAGIC, 9, char[256])
 #define KW_IOCTL_SET_HOSTNAME  _IOW(KW_MAGIC, 9, char[64])
 #define KW_IOCTL_GET_HOSTNAME  _IOR(KW_MAGIC, 10, char[64])
 
