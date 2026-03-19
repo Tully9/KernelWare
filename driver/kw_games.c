@@ -28,7 +28,7 @@ void kw_set_timer_ms(unsigned int ms) {
 
 static int fill_count = 0;
 
-static int pipe_writer_fn(void *data) {
+static int pipe_writer_fn(void *data) { // not called in the project anywhere yet
     while (!kthread_should_stop()) {
         msleep(FILL_INTERVAL);
         if (kthread_should_stop())
@@ -52,6 +52,7 @@ int kw_games_pick(int prev) {
     return pick;
 }
 
+// 
 int kw_game_start(int game_id) {
     if (game_id == 0) {
         kw_state_start_round("");
@@ -78,6 +79,7 @@ int kw_game_start(int game_id) {
     return 0;
 }
 
+// called in kernelware_main.c and stops the game during the module unloading
 void kw_game_stop(void) {
     kw_timer_stop();
     if (pipe_thread) {
@@ -90,8 +92,7 @@ void kw_game_stop(void) {
 
 
 // Pipe dream
-void pipe_drain(void)
-{
+void pipe_drain(void) { // not called in the project anywhere yet
     if (fill_count > 0)
         fill_count -= 5;
     if (fill_count < 0)
@@ -103,9 +104,8 @@ void pipe_drain(void)
     wake_up_interruptible(&my_wq);
 }
 
-
-void kw_game_handle_input(unsigned char event)
-{
+// call in kernelware_main.c and processes a button press in "kw_write" for the kill it mini-game
+void kw_game_handle_input(unsigned char event) {
     switch (active_game_id) {
     case 2:  // kill it -> compare typed PID to prompt
         if (strcmp(kernel_buf, current_state.prompt) == 0) {
