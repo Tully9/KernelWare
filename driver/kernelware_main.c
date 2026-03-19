@@ -122,6 +122,12 @@ static long kw_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
         current_state.score      = 0;
         return 0;
 
+    case KW_IOCTL_SET_PROMPT:
+        if (copy_from_user(current_state.prompt, (char __user *)arg, sizeof(current_state.prompt)))
+            return -EFAULT;
+        current_state.prompt[sizeof(current_state.prompt) - 1] = '\0';
+        return 0;
+
     case KW_IOCTL_STOP:
         kw_game_stop();
         return 1;

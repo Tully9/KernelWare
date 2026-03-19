@@ -126,8 +126,7 @@ int kw_game_start(int game_id) {
     }
 
     if (game_id == 3) {
-        u32 pid = get_random_u32() % 65534 + 1;
-        snprintf(current_state.prompt, sizeof(current_state.prompt), "%u", pid);
+        current_state.prompt[0] = '\0';  // userspace sets the real PID via KW_IOCTL_SET_PROMPT
         kw_timer_start(timer_duration_ms);
         return 0;
     }

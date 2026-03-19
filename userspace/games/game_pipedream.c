@@ -35,7 +35,7 @@ int game_pipedream_run(int fd)
             snprintf(game_shared.message, 128, "PIPE OVERFLOWED!");
             snprintf(game_shared.subtext, 128, "Drain faster next time!");
             pthread_mutex_unlock(&game_mutex);
-            sleep(2);
+            sleep(1);
             break;
         }
 
@@ -59,7 +59,7 @@ int game_pipedream_run(int fd)
         }
     }
     ioctl(fd, KW_IOCTL_STOP);
-    sleep(2);
+    sleep(1);
     currentScreen = 0;
     return won;
 }
