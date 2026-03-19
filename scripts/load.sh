@@ -16,7 +16,13 @@ if lsmod | grep -q "^${MODULE_NAME}"; then
     exit 0
 fi
 
-#check .ko exists
+#check .ko exists and make
+if [ ! -f "${MODULE_PATH}" ]; then
+    echo "Module file '${MODULE_PATH}' not found, making file"
+    make -C "${SCRIPT_DIR}/../driver"
+fi
+
+#check .ko exits after make
 if [ ! -f "${MODULE_PATH}" ]; then
     echo "Error: Module file '${MODULE_PATH}' not found"
     exit 1

@@ -1,6 +1,8 @@
 #!/bin/bash
 
 MODULE_NAME="kernelware"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MODULE_PATH="${SCRIPT_DIR}/../driver/kernelware.ko"
 
 #check root
 if [ "$(id -u)" -ne 0 ]; then
@@ -16,6 +18,12 @@ fi
 
 #remove
 rmmod "${MODULE_NAME}"
+
+#check .ko exists and make clean
+if [ -f "${MODULE_PATH}" ]; then
+    echo "Module file '${MODULE_PATH}' found, making clean"
+    make -C "${SCRIPT_DIR}/../driver" clean
+fi
 
 if [ $? -eq 0 ]; then
     echo "Module '${MODULE_NAME}' unloaded successfully"

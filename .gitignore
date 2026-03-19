@@ -1,1 +1,21 @@
 /.idea
+*.o
+*.ko
+*.mod
+*.mod.c
+.*.cmd
+Module.symvers
+modules.order
+.tmp_versions/
+compile_commands.json
+.cache
+.clangd
+*.o.d
+KernelWare_Plan.xlsx
+KernelWare_Design_Document.docx
+branch_summary.docx
+game
+*.pem
+
+# userspace compiled binaries
+/userspace/kernelware
