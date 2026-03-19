@@ -327,6 +327,23 @@ bool kw_lb_get_alive(int idx)
     return lb_alive[idx];
 }
 
+int kw_lb_get_pid(int idx)
+{
+    if (idx < 0 || idx >= LB_THREAD_COUNT || !lb_alive[idx] || !lb_threads[idx])
+        return 0;
+    return (int)lb_threads[idx]->pid;
+}
+
+bool kw_memleak_is_allocated(void)
+{
+    return memleak_ptr != NULL;
+}
+
+int kw_typefaster_get_count(void)
+{
+    return typefaster_count;
+}
+
 int hackhost_check_answer(const char *input)
 {
     return strcmp(input, hack_saved_hostname) == 0;

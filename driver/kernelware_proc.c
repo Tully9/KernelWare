@@ -1,5 +1,6 @@
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
+#include <linux/utsname.h>
 #include "kernelware.h"
 #include "kw_driver.h"
 #include "kw_games.h"
@@ -29,30 +30,63 @@ static const char *game_name(int id)
 static int stats_show(struct seq_file *m, void *v)
 {
     int game_id = current_state.game_id;
+    int i;
 
+    seq_printf(m, "=== Session ===\n");
+    seq_printf(m, "score:       %d\n", current_state.session_score);
+    seq_printf(m, "lives:       %d\n", current_state.session_lives);
+    seq_printf(m, "game:        %s (%d)\n", game_name(game_id), game_id);
+
+    seq_printf(m, "\n=== Driver ===\n");
     seq_printf(m, "open_count:  %d\n", drv_state.open_count);
     seq_printf(m, "read_count:  %d\n", drv_state.read_count);
     seq_printf(m, "write_count: %d\n", drv_state.write_count);
-    seq_printf(m, "game:        %s (%d)\n", game_name(game_id), game_id);
-    seq_printf(m, "score:       %d\n", current_state.score);
-    seq_printf(m, "lives:       %d\n", current_state.lives);
 
+    if (game_id < 1)
+        return 0;
+
+    seq_printf(m, "\n=== %s ===\n", game_name(game_id));
     switch (game_id) {
     case 1:  /* Pipe Dream */
         seq_printf(m, "pipe_fill:   %d%%\n", kw_game_get_fill_percent());
         break;
+
+    case 2:  /* Rot Brain */
+        if (current_state.prompt[0])
+            seq_printf(m, "scrambled:   %s\n", current_state.prompt);
+        break;
+
     case 3:  /* Kill It */
         if (current_state.prompt[0])
             seq_printf(m, "target_pid:  %s\n", current_state.prompt);
         break;
-    case 6:  /* Load Balancer */ {
-        int i;
-        seq_printf(m, "lb_threads:\n");
-        for (i = 0; i < LB_THREAD_COUNT; i++)
-            seq_printf(m, "  kw_lb_%d:   %s\n", i + 1,
-                       kw_lb_get_alive(i) ? "running" : "dead");
+
+    case 4:  /* Memory Leak */
+        seq_printf(m, "allocated:   %s\n", kw_memleak_is_allocated() ? "yes" : "no");
+        seq_printf(m, "ml_lives:    %d\n", current_state.lives);
         break;
-    }
+
+    case 5:  /* Type Faster */
+        seq_printf(m, "keypresses:  %d / %d\n",
+                   kw_typefaster_get_count(), TYPEFASTER_TARGET_EXPORTED);
+        break;
+
+    case 6:  /* Load Balancer */
+        for (i = 0; i < LB_THREAD_COUNT; i++) {
+            if (kw_lb_get_alive(i))
+                seq_printf(m, "kw_lb_%d:     running (pid %d)\n",
+                           i + 1, kw_lb_get_pid(i));
+            else
+                seq_printf(m, "kw_lb_%d:     dead\n", i + 1);
+        }
+        break;
+
+    case 7:  /* Hack the Host */
+        seq_printf(m, "scrambled:   %s\n", init_uts_ns.name.nodename);
+        if (current_state.prompt[0])
+            seq_printf(m, "original:    %s\n", current_state.prompt);
+        break;
+
     default:
         if (current_state.prompt[0])
             seq_printf(m, "prompt:      %s\n", current_state.prompt);

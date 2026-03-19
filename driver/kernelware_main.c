@@ -143,9 +143,9 @@ static long kw_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
                            sizeof(struct kw_config)))
             return -EFAULT;
 
-        current_state.lives      = current_config.lives;
-        current_state.difficulty = current_config.difficulty;
-        current_state.score      = current_config.score;
+        current_state.session_score = current_config.score;
+        current_state.session_lives = current_config.lives;
+        current_state.difficulty    = current_config.difficulty;
         return 0;
 
     case KW_IOCTL_SUBMIT_SCORE: {

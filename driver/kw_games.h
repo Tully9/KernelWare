@@ -24,8 +24,13 @@ void kw_hackhost_win(void);
 int hackhost_check_answer(const char *input);
 
 // Proc accessors
-int kw_game_get_fill_percent(void);
+int  kw_game_get_fill_percent(void);
 bool kw_lb_get_alive(int idx);
+int  kw_lb_get_pid(int idx);
+bool kw_memleak_is_allocated(void);
+int  kw_typefaster_get_count(void);
+
+#define TYPEFASTER_TARGET_EXPORTED 20
 
 
 #endif
