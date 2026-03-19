@@ -17,12 +17,14 @@
 #define PIPE_BUF_MAX ((int)(sizeof(kernel_buf) - 1))
 #define FILL_BYTE 0xBB
 #define FILL_INTERVAL 200
+#define TYPEFASTER_TARGET 20  // type faster, goal amount
 
 static DECLARE_COMPLETION(pipe_done);
 static struct task_struct *pipe_thread;
 static int active_game_id;
 unsigned int timer_duration_ms = 10000;
 static void *memleak_ptr = NULL;
+static int typefaster_count = 0; // type faster
 
 static int fill_count = 0; // pipe dream
 
@@ -136,6 +138,14 @@ int kw_game_start(int game_id) {
         return 0;
     }
 
+    if (game_id == 5) {
+    typefaster_count = 0;
+    current_state.score = 0;
+    current_state.prompt[0] = '\0';
+    kw_timer_start(timer_duration_ms);
+    return 0;
+    }
+
     // game 1 - Pipe Dream
     pipe_thread = kthread_run(pipe_writer_fn, NULL, "kw_pipe_writer");
     if (IS_ERR(pipe_thread)) {
@@ -148,8 +158,8 @@ int kw_game_start(int game_id) {
 }
 
 int kw_games_pick(int prev) {
-    int ids[] = {1, 2, 3, 4};
-    int n = 4;
+    int ids[] = {1, 2, 3, 4,5};
+    int n = 5;
     int pick;
     do {
         pick = ids[get_random_u32() % n];
@@ -227,5 +237,17 @@ void kw_game_handle_input(unsigned char event)
         data_ready = 1;
         wake_up_interruptible(&my_wq);
         break;
+    
+        case 5 : 
+            typefaster_count++;
+            current_state.score = (typefaster_count * 100) / TYPEFASTER_TARGET;
+            if (current_state.score > 100) current_state.score = 100;
+            if (typefaster_count >= TYPEFASTER_TARGET)
+            game_state.answer_correct = true;
+            kernel_buf[0] = (unsigned char)(current_state.score & 0xFF);
+            buf_len = 1;
+            data_ready = 1;
+            wake_up_interruptible(&my_wq);
+            break;
     }
 }
