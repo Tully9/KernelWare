@@ -1,8 +1,6 @@
 // ioctl file for kernel and userspace - could be in driver and setup differently in the markfile to reduce the amount of directories
 #ifndef KW_IOCTL_H
 #define KW_IOCTL_H
-#define KW_IOCTL_SET_HOSTNAME  _IOW(KW_MAGIC, 9, char[64])
-#define KW_IOCTL_GET_HOSTNAME  _IOR(KW_MAGIC, 10, char[64])
 
 #ifdef __KERNEL__
 #include <linux/types.h>
@@ -58,5 +56,7 @@ struct kw_stats {
 #define KW_IOCTL_GET_STATS     _IOR(KW_MAGIC, 6, struct kw_stats)
 #define KW_IOCTL_GET_STATE     _IOR(KW_MAGIC, 7, struct kw_state)
 #define KW_IOCTL_RESET_SCORE   _IO (KW_MAGIC, 8)
+#define KW_IOCTL_SET_HOSTNAME  _IOW(KW_MAGIC, 9, char[64])
+#define KW_IOCTL_GET_HOSTNAME  _IOR(KW_MAGIC, 10, char[64])
 
 #endif

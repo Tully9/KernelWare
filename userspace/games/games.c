@@ -47,7 +47,8 @@ game_def_t games[] = {
         .draw = game_memleak_draw,
     },
     {
-        .name = "HACK THE HOST - Rename the machine",  // add this
+        .name = "HACK THE HOST - Rename the machine",
+        .input_mode = INPUT_MODE_TEXT,
         .run  = game_hackhost_run,
         .draw = game_hackhost_draw,
     },

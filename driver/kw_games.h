@@ -15,7 +15,6 @@ void pipe_drain(void);
 
 void rotbrain_start(void);
 int rotbrain_check_answer(const char *input);
-int kw_games_pick(int prev);
 
 
 #endif

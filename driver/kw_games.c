@@ -61,15 +61,6 @@ static int pipe_writer_fn(void *data) {
     return 0;
 }
 
-int kw_games_pick(int prev) {
-    int ids[] = {1, 2, 3};
-    int n = 3;
-    int pick;
-    do {
-        pick = ids[get_random_u32() % n];
-    } while (pick == prev && n > 1);
-    return pick;
-
 //Rot Brain
 static void rotbrain_apply(const char *input, char *output, int n)
 {
@@ -145,6 +136,11 @@ int kw_game_start(int game_id) {
         return 0;
     }
 
+    if (game_id == 5) {
+        kw_timer_start(timer_duration_ms);
+        return 0;
+    }
+
     // game 1 - Pipe Dream
     pipe_thread = kthread_run(pipe_writer_fn, NULL, "kw_pipe_writer");
     if (IS_ERR(pipe_thread)) {
@@ -157,8 +153,8 @@ int kw_game_start(int game_id) {
 }
 
 int kw_games_pick(int prev) {
-    int ids[] = {1, 2, 3, 4};
-    int n = 4;
+    int ids[] = {1, 2, 3, 4, 5};
+    int n = 5;
     int pick;
     do {
         pick = ids[get_random_u32() % n];
