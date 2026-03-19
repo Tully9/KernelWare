@@ -9,11 +9,9 @@
 extern volatile int currentScreen;
 
 
-void game_rotbrain_run(int fd)
+int game_rotbrain_run(int fd)
 {
-    struct kw_config cfg = { .lives = 3, .difficulty = 1.0, .timeout_ms = 30000 };
-    ioctl(fd, KW_IOCTL_SET_CONFIG, &cfg);
-    ioctl(fd, KW_IOCTL_START, 2);
+    //struct kw_config cfg = { .lives = 3, .difficulty = 1.0, .timeout_ms = 30000 };
 
     // Fetch the scrambled prompt
     struct kw_state state;
@@ -21,13 +19,14 @@ void game_rotbrain_run(int fd)
     ioctl(fd, KW_IOCTL_GET_STATE, &state);
 
     pthread_mutex_lock(&game_mutex);
-    snprintf(game_shared.message, 128, "DECODE: %s", state.prompt);
+    snprintf(game_shared.message, 128, "DECODE: %.119s", state.prompt);
     snprintf(game_shared.subtext, 128, "Type the original word and press Enter");
     game_shared.score = 0;
     game_shared.typed[0] = '\0';
     game_shared.typed_len = 0;
     pthread_mutex_unlock(&game_mutex);
 
+    int won = 0;
     unsigned char event;
     while (1) {
         ssize_t n = read(fd, &event, 1);
@@ -37,6 +36,7 @@ void game_rotbrain_run(int fd)
             pthread_mutex_lock(&game_mutex);
             snprintf(game_shared.message, 300, "CORRECT! Score: 100");
             pthread_mutex_unlock(&game_mutex);
+            won = 1;
             break;
         } else if (event == KW_EVENT_TIMEOUT) {
             pthread_mutex_lock(&game_mutex);
@@ -49,6 +49,7 @@ void game_rotbrain_run(int fd)
     ioctl(fd, KW_IOCTL_STOP);
     sleep(2);
     currentScreen = 0;
+    return won;
 }
 
 

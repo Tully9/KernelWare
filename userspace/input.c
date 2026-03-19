@@ -29,11 +29,7 @@ struct key_mapping {
     int  btn_index;
     char character;
 };
-// Same but for mapping number keycodes to screens
-struct nav_mapping {
-    int keycode;
-    int screen;
-};
+
 
 //Maps asdf keys, to add more keys ADD TO STRUCT
 static struct key_mapping keymap[] = {
@@ -63,17 +59,19 @@ static struct key_mapping keymap[] = {
     { KEY_X, 23, 'x' },
     { KEY_Y, 24, 'y' },
     { KEY_Z, 25, 'z' },
+    { KEY_0, 26, '0' },
+    
+    { KEY_1, 27, '1' },
+    { KEY_2, 28, '2' },
+    { KEY_3, 29, '3' },
+    { KEY_4, 30, '4' },
+    { KEY_5, 31, '5' },
+    { KEY_6, 32, '6' },
+    { KEY_7, 33, '7' },
+    { KEY_8, 34, '8' },
+    { KEY_9, 35, '9' },
 };
 static int keymap_size = sizeof(keymap) / sizeof(keymap[0]);
-
-
-//For Nav keys - all route to screen 1 (start signal)
-static struct nav_mapping navmap[] = {
-    { KEY_1, 1 },
-    { KEY_2, 1 },
-    { KEY_3, 1 },
-};
-static int navmap_size = sizeof(navmap) / sizeof(navmap[0]);
 
 
 static int kw_getch(void)
@@ -111,6 +109,10 @@ static void ssh_input_loop(void)
     }
 }
 
+
+
+
+
 void *kw_input_thread(void *arg) // arg isn't used but compiler will give a waring as in pthread signature
 {
     (void)arg;
@@ -138,14 +140,11 @@ void *kw_input_thread(void *arg) // arg isn't used but compiler will give a wari
         if (ev.type != EV_KEY || ev.value != 1)
             continue;
         
+
         // checks nav keys
-        if (active_game == -1) {
-            for (int i = 0; i < navmap_size; i++) {
-                if (navmap[i].keycode == ev.code) {
-                    currentScreen = navmap[i].screen;
-                    break;
-                }
-            }
+        if (currentScreen <= 0) {
+            currentScreen++;
+            continue;
         }
     
 

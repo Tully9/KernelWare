@@ -7,7 +7,7 @@ pthread_mutex_t game_mutex = PTHREAD_MUTEX_INITIALIZER;
 int  game_pipedream_run(int fd);
 void game_pipedream_draw(void);
 
-void game_rotbrain_run(int fd);
+int game_rotbrain_run(int fd);
 void game_rotbrain_draw(void);
 
 int  game_killit_run(int fd);
@@ -32,11 +32,13 @@ game_def_t games[] = {
     },
     {
         .name = "KILL IT - Type the PID to kill the process",
+        .input_mode = INPUT_MODE_TEXT,
         .run  = game_killit_run,
         .draw = game_killit_draw,
     },
     {
         .name = "MEMORY LEAK - Alloc and free kernel memory",
+        .input_mode = INPUT_MODE_BUTTONS,
         .run  = game_memleak_run,
         .draw = game_memleak_draw,
     },

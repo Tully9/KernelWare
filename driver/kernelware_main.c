@@ -13,6 +13,7 @@
 #include <linux/cdev.h>
 #include <linux/wait.h>
 #include <linux/sched.h>
+#include <linux/hrtimer.h>
 
 static dev_t dev_num;
 static struct cdev my_cdev;
@@ -58,14 +59,18 @@ static ssize_t kw_write(struct file *file, const char __user *buf, size_t len, l
     buf_len = bytes;
     kernel_buf[bytes] = '\0';
 
-    if (current_state.game_id == 2 && buf_len > 1) {
-        if (rotbrain_check_answer(kernel_buf)) {
+    //FOR TEXT INPUTS
+    if ((current_state.game_id == 2 || current_state.game_id == 3) && buf_len > 1) {
+        int correct = (current_state.game_id == 2)
+                  ? rotbrain_check_answer(kernel_buf)
+                  : (strcmp(kernel_buf, current_state.prompt) == 0);
+
+        if (correct) {
             kernel_buf[0] = KW_EVENT_CORRECT;
             buf_len = 1;
             data_ready = 1;
             wake_up_interruptible(&my_wq);
         }
-        // wrong answer - do nothing, let player keep trying
         return bytes;
     }
 
@@ -119,7 +124,8 @@ static long kw_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 
     case KW_IOCTL_STOP:
         kw_game_stop();
-        return 0;
+        return 1;
+
     default:
         return -ENOTTY;  // standard "not a valid ioctl" error
     }

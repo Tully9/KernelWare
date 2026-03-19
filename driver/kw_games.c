@@ -25,22 +25,35 @@ unsigned int timer_duration_ms = 10000;
 static void *memleak_ptr = NULL;
 
 static int fill_count = 0; // pipe dream
+
 // Rot Brain
 static int rot_n = 0;
 static char rot_answer[64];
+
+
 void kw_set_timer_ms(unsigned int ms) {
     timer_duration_ms = ms;
 }
 
-static int fill_count = 0;
 
-static int pipe_writer_fn(void *data) { // not called in the project anywhere yet
+
+static int pipe_writer_fn(void *data) {
     while (!kthread_should_stop()) {
         msleep(FILL_INTERVAL);
         if (kthread_should_stop())
             break;
-        kernel_buf[0] = FILL_BYTE;
-        buf_len = 1;
+
+        if (fill_count >= PIPE_BUF_MAX) {
+            kernel_buf[0] = KW_EVENT_TIMEOUT;
+            buf_len = 1;
+            fill_count = 0;
+        } else {
+            fill_count++;
+            kernel_buf[0] = FILL_BYTE;
+            buf_len = 1;
+            current_state.score = (fill_count * 100) / PIPE_BUF_MAX;
+        }
+
         data_ready = 1;
         wake_up_interruptible(&my_wq);
     }
@@ -84,23 +97,60 @@ int rotbrain_check_answer(const char *input)
     return strncmp(input, rot_answer, strlen(rot_answer)) == 0;
 }
 
-/*
+
+
 int kw_game_start(int game_id) {
+    if (game_id == 0)
+        game_id = kw_games_pick(active_game_id);
+
     active_game_id = game_id;
+    current_state.game_id = game_id;
     fill_count = 0;
     reinit_completion(&pipe_done);
-    
+
+    data_ready = 0;
+    buf_len = 0;
+    kernel_buf[0] = 0;
+
+    current_state.deadline_ns = ktime_get_ns() + (u64)timer_duration_ms * 1000000ULL;
+
+    if (memleak_ptr) {
+        kfree(memleak_ptr);
+        memleak_ptr = NULL;
+    }
+
     if (game_id == 2) {
         rotbrain_start();
+        kw_timer_start(timer_duration_ms);
         return 0;
     }
-    
+
+    if (game_id == 3) {
+        u32 pid = get_random_u32() % 65534 + 1;
+        snprintf(current_state.prompt, sizeof(current_state.prompt), "%u", pid);
+        kw_timer_start(timer_duration_ms);
+        return 0;
+    }
+
+    if (game_id == 4) {
+        kw_timer_start(timer_duration_ms);
+        return 0;
+    }
+
+    // game 1 - Pipe Dream
     pipe_thread = kthread_run(pipe_writer_fn, NULL, "kw_pipe_writer");
+    if (IS_ERR(pipe_thread)) {
+        int err = PTR_ERR(pipe_thread);
+        pipe_thread = NULL;
+        return err;
+    }
+    kw_timer_start(timer_duration_ms);
+    return 0;
 }
-*/
+
 int kw_games_pick(int prev) {
-    int ids[] = {1, 2};
-    int n = 2;
+    int ids[] = {1, 2, 3, 4};
+    int n = 4;
     int pick;
     do {
         pick = ids[get_random_u32() % n];
@@ -108,39 +158,7 @@ int kw_games_pick(int prev) {
     return pick;
 }
 
-// 
-int kw_game_start(int game_id) {
-    if (game_id == 0) {
-        kw_state_start_round("");
-        game_id = game_state.current_game_id;
-    }
 
-    active_game_id = game_id;
-    current_state.game_id = game_id;
-    current_state.deadline_ns = ktime_get_ns() + (u64)timer_duration_ms * 1000000ULL;
-
-    // clear any stale event from the previous game
-    data_ready = 0;
-    buf_len = 0;
-    kernel_buf[0] = 0;
-
-    if (memleak_ptr) {
-    kfree(memleak_ptr);
-    memleak_ptr = NULL;
-    }
-
-    if (game_id == 2) {
-        u32 pid = get_random_u32() % 65534 + 1;
-        snprintf(current_state.prompt, sizeof(current_state.prompt), "%u", pid);
-        kw_timer_start(timer_duration_ms);
-        return 0;
-    }
-
-    kw_timer_start(timer_duration_ms);
-    return 0;
-}
-
-// called in kernelware_main.c and stops the game during the module unloading
 void kw_game_stop(void) {
     kw_timer_stop();
     if (pipe_thread) {
@@ -159,43 +177,51 @@ void kw_game_stop(void) {
 
 
 // Pipe dream
-void pipe_drain(void) { // not called in the project anywhere yet
+void pipe_drain(void)
+{
     if (fill_count > 0)
         fill_count -= 5;
     if (fill_count < 0)
         fill_count = 0;
 
-    kernel_buf[0] = FILL_BYTE;
-    buf_len = 1;
-    data_ready = 1;
-    wake_up_interruptible(&my_wq);
+    current_state.score = (fill_count * 100) / PIPE_BUF_MAX;
 }
 
 // call in kernelware_main.c and processes a button press in "kw_write" for the kill it mini-game
-void kw_game_handle_input(unsigned char event) {
+// void kw_game_handle_input(unsigned char event) {
+//     current_state.score = (fill_count * 100) / PIPE_BUF_MAX;
+// }
+
+void kw_game_handle_input(unsigned char event)
+{
     switch (active_game_id) {
-        case 1 :
+    case 1:  // Pipe Dream
+        if (KW_EVENT_IS_PRESS(event))
+            pipe_drain();
+        break;
+
+    case 4:  // Memory Leak
         if (event == 'A') {
             if (memleak_ptr == NULL) {
                 memleak_ptr = kmalloc(1024, GFP_KERNEL);
                 if (memleak_ptr) {
                     current_state.score++;
-                    kernel_buf[0] = 0x01;  
+                    kernel_buf[0] = 0x01;
                 } else {
-                    kernel_buf[0] = 0x00;  
+                    kernel_buf[0] = 0x00;
                 }
             } else {
                 current_state.lives--;
-                kernel_buf[0] = 0x02; // leak
+                kernel_buf[0] = 0x02;
             }
         } else if (event == 'F') {
             if (memleak_ptr != NULL) {
                 kfree(memleak_ptr);
                 memleak_ptr = NULL;
-                kernel_buf[0] = 0x03;      
+                kernel_buf[0] = 0x03;
             } else {
                 current_state.lives--;
-                kernel_buf[0] = 0x04;   
+                kernel_buf[0] = 0x04;
             }
         }
         buf_len = 1;
@@ -203,18 +229,4 @@ void kw_game_handle_input(unsigned char event) {
         wake_up_interruptible(&my_wq);
         break;
     }
-        /*
-    case 3:  // memory leak -> 'A' allocates, 'F' frees
-        if (event == 'A') {
-            current_state.score++;
-            u32 pid = get_random_u32() % 65534 + 1;
-            snprintf(current_state.prompt, sizeof(current_state.prompt), "%u", pid);
-            kernel_buf[0] = 0x01;
-        } else {
-            kernel_buf[0] = 0x00;
-        }
-        buf_len = 1;
-        break;
-    }
-*/
 }

@@ -8,127 +8,64 @@
 #include "games.h"
 
 extern volatile int input_active;
+extern volatile int currentScreen;
 
 int game_killit_run(int fd)
 {
-    pthread_mutex_lock(&game_mutex);
-    snprintf(game_shared.message, 128, "Type the PID to kill it!");
-    snprintf(game_shared.subtext,  128, "");
-    pthread_mutex_unlock(&game_mutex);
+    //ioctl(fd, KW_IOCTL_START, 3);
 
     struct kw_state state;
-    char input[32];
+    memset(&state, 0, sizeof(state));
+    ioctl(fd, KW_IOCTL_GET_STATE, &state);
 
+    pthread_mutex_lock(&game_mutex);
+    snprintf(game_shared.message, 300, "KILL PID: %s", state.prompt);
+    snprintf(game_shared.subtext,  128, "Type the PID and press Enter");
+    game_shared.typed[0] = '\0';
+    game_shared.typed_len = 0;
+    pthread_mutex_unlock(&game_mutex);
+
+    int won = 0;
+    unsigned char event;
     while (1) {
-        memset(&state, 0, sizeof(state));
-        ioctl(fd, KW_IOCTL_GET_STATE, &state);
+        ssize_t n = read(fd, &event, 1);
+        if (n <= 0) break;
 
-        if (state.score >= 100)
-            break;
-
-        pthread_mutex_lock(&game_mutex);
-        snprintf(game_shared.message, 128, "Kill PID: %s", state.prompt);
-        pthread_mutex_unlock(&game_mutex);
-
-        memset(input, 0, sizeof(input));
-        int len = 0;
-        int timed_out = 0;
-
-        input_active = 1;
-        usleep(60000);  // let render thread finish its current frame
-        clear();
-        mvprintw(1,  10, "=== KernelWare ===");
-        mvprintw(7,  10, "=== KILL IT ===");
-        mvprintw(9,  10, "Kill PID: %s", state.prompt);
-        mvprintw(12, 10, "Type the PID and press Enter");
-        refresh();
-
-        curs_set(1);
-        timeout(100);
-
-        while (len < (int)sizeof(input) - 1) {
-            memset(&state, 0, sizeof(state));
-            ioctl(fd, KW_IOCTL_GET_STATE, &state);
-            if (state.score >= 100) { timed_out = 1; break; }
-
+        if (event == KW_EVENT_CORRECT) {
             pthread_mutex_lock(&game_mutex);
-            int cur_score = game_shared.score;
-            int cur_lives = game_shared.lives;
+            snprintf(game_shared.message, 300, "CORRECT! PID eliminated.");
+            game_shared.subtext[0] = '\0';
             pthread_mutex_unlock(&game_mutex);
-            mvprintw(3, 10, "Score: %-5d  Lives: %d", cur_score, cur_lives);
-
-            int tw_rem = 100 - state.score;
-            if (tw_rem < 0) tw_rem = 0;
-            const int TW = 30;
-            int tf = (tw_rem * TW) / 100;
-            if (tw_rem < 20) attron(A_BOLD);
-            mvprintw(5, 10, "TIME [");
-            for (int i = 0; i < TW; i++)
-                mvaddch(5, 16 + i, i < tf ? '#' : '-');
-            mvprintw(5, 16 + TW, "] %3d%%", tw_rem);
-            if (tw_rem < 20) attroff(A_BOLD);
-
-            mvprintw(14, 10, "> %s ", input);
-            refresh();
-
-            int c = getch();
-            if (c == ERR) continue;
-            if (c == '\n' || c == 13) break;
-            if ((c == 127 || c == KEY_BACKSPACE) && len > 0)
-                input[--len] = '\0';
-            else if (c >= '0' && c <= '9')
-                input[len++] = (char)c;
-        }
-
-        timeout(-1);
-        curs_set(0);
-        input_active = 0;
-
-        if (timed_out)
+            won = 1;
             break;
-
-        if (len == 0)
-            continue;
-
-        write(fd, input, strlen(input));
-
-        unsigned char result;
-        read(fd, &result, 1);
-
-        if (result == 0x01) {
+        } else if (event == KW_EVENT_TIMEOUT) {
             pthread_mutex_lock(&game_mutex);
-            snprintf(game_shared.message, 128, "CORRECT!");
-            snprintf(game_shared.subtext, 128, "");
+            snprintf(game_shared.message, 300, "TIME'S UP!");
+            game_shared.subtext[0] = '\0';
             pthread_mutex_unlock(&game_mutex);
-            input_active = 0;
-            ioctl(fd, KW_IOCTL_STOP);
-            return 1;
+            break;
         }
-
-        pthread_mutex_lock(&game_mutex);
-        snprintf(game_shared.subtext, 128, "Wrong! Try again");
-        pthread_mutex_unlock(&game_mutex);
     }
 
-    input_active = 0;
-    pthread_mutex_lock(&game_mutex);
-    snprintf(game_shared.message, 128, "TIME'S UP!");
-    snprintf(game_shared.subtext, 128, "Final score: %d", game_shared.score);
-    pthread_mutex_unlock(&game_mutex);
+    ioctl(fd, KW_IOCTL_STOP);
     sleep(2);
-    return 0;
+    currentScreen = 0;
+    return won;
 }
 
 void game_killit_draw(void)
 {
     pthread_mutex_lock(&game_mutex);
-    char msg[128], sub[128];
-    strncpy(msg, game_shared.message, 128);
-    strncpy(sub, game_shared.subtext,  128);
+    char msg[300], sub[128], typed[64];
+    strncpy(msg,   game_shared.message, 300);
+    strncpy(sub,   game_shared.subtext,  128);
+    strncpy(typed, game_shared.typed,    64);
     pthread_mutex_unlock(&game_mutex);
 
     mvprintw(7,  10, "=== KILL IT ===");
     mvprintw(9,  10, "%-40s", msg);
     mvprintw(10, 10, "%-40s", sub);
     mvprintw(12, 10, "Type the PID and press Enter");
+    mvprintw(12, 10, "Your input: %s_", typed);
+    mvprintw(14, 10, "[0-9] type | [Enter] submit | [Backspace] delete");
 }

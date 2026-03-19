@@ -8,6 +8,7 @@ extern unsigned int timer_duration_ms;
 
 void kw_game_handle_input(unsigned char event);
 
+int kw_games_pick(int prev);
 
 // Game input functions
 void pipe_drain(void);
@@ -15,5 +16,6 @@ void pipe_drain(void);
 void rotbrain_start(void);
 int rotbrain_check_answer(const char *input);
 int kw_games_pick(int prev);
+
 
 #endif
