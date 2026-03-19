@@ -102,8 +102,10 @@ int rotbrain_check_answer(const char *input)
 
 
 int kw_game_start(int game_id) {
-    if (game_id == 0)
+    if (game_id == 0) {
+        kw_state_start_round("");
         game_id = kw_games_pick(active_game_id);
+    }
 
     active_game_id = game_id;
     current_state.game_id = game_id;
