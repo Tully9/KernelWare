@@ -1,5 +1,6 @@
 CC     = gcc
-CFLAGS = -Wall -Wextra -pthread -lncurses -I../shared
+CFLAGS = -Wall -Wextra -pthread -I../shared
+LIBS   = -lncurses
 
 SRCS = main.c \
        input.c \
@@ -10,7 +11,7 @@ SRCS = main.c \
 all: game
 
 game: $(SRCS)
-	$(CC) $(CFLAGS) -o game $(SRCS)
+	$(CC) $(CFLAGS) -o game $(SRCS) $(LIBS)
 
 clean:
 	rm -f game

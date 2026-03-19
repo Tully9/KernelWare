@@ -79,10 +79,7 @@ static long kw_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
         kw_game_start(current_state.game_id);
         return 0;
 
-    case KW_IOCTL_STOP:
-        kw_game_stop();
-        kw_state_next_game();
-        return 0;
+    
 
     case KW_IOCTL_SET_DIFF:
         kw_set_timer_ms((unsigned int)arg);
@@ -110,6 +107,11 @@ static long kw_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
         current_state.lives      = current_config.lives;
         current_state.difficulty = current_config.difficulty;
         current_state.score      = 0;
+        return 0;
+
+        case KW_IOCTL_STOP:
+        kw_game_stop();
+        kw_state_next_game();
         return 0;
 
     default:
