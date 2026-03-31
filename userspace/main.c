@@ -1,6 +1,7 @@
 #include "input.h"
 #include "games/games.h"
 #include "../shared/kw_ioctl.h"
+#include "stats.h"
 
 #include <stdio.h>
 #include <pthread.h>
@@ -9,6 +10,7 @@
 #include <ncurses.h>
 #include <sys/ioctl.h>
 #include <string.h>
+#include <time.h>
 
 #define NUMOFTHREADS 3
 volatile char last_key = ' ';
@@ -16,6 +18,11 @@ volatile int currentScreen = 0;
 volatile int input_active = 0;
 int driverFD = 0;
 volatile int active_game = -1;
+int session_games_played = 0;
+int session_games_won = 0;
+int session_game_ids[100] = {0};
+
+extern stats_t global_stats;
 
 
 
@@ -48,6 +55,13 @@ void *game_manager_thread(void *arg) {
             currentScreen = game_id;
             int won = games[game_id - 1].run(driverFD);
 
+            // Track session stats
+            if (session_games_played < 100) {
+                session_game_ids[session_games_played] = game_id - 1;  // 0-indexed
+                session_games_played++;
+                if (won) session_games_won++;
+            }
+
             pthread_mutex_lock(&game_mutex);
             if (won) game_shared.score++;
             else     game_shared.lives--;
@@ -77,6 +91,12 @@ void *game_manager_thread(void *arg) {
         pthread_mutex_unlock(&game_mutex);
         ioctl(driverFD, KW_IOCTL_SUBMIT_SCORE, final_score);
 
+        // record stats
+        stats_record_session(final_score, session_games_played, session_games_won, session_game_ids);
+        session_games_played = 0;
+        session_games_won = 0;
+        memset(session_game_ids, 0, sizeof(session_game_ids));
+
         // game over, wait for any key to return to start
         currentScreen = -1;
         while (currentScreen == -1) usleep(100000);
@@ -105,7 +125,28 @@ void* render_thread(void* arg)
         if (input_active) { usleep(50000); continue; }
         clear();
 
-        if (currentScreen == -1) {
+        if (currentScreen == -2) {
+            // Stats Dashboard Screen
+            mvprintw(2, 10, "=== STATISTICS DASHBOARD ===");
+            mvprintw(4, 10, "Total Games Played: %d", global_stats.total_games_played);
+            mvprintw(5, 10, "Total Games Won:   %d", global_stats.total_games_won);
+            mvprintw(6, 10, "Total Games Lost:  %d", global_stats.total_games_lost);
+            mvprintw(7, 10, "Win Rate:          %d%%", stats_get_win_rate());
+            mvprintw(8, 10, "High Score:        %d", global_stats.high_score);
+            
+            mvprintw(10, 10, "--- Games Per Type ---");
+            extern game_def_t games[];
+            extern int num_games;
+            for (int i = 0; i < num_games && i < 7; i++) {
+                int played = global_stats.games_played_per_type[i];
+                int won = global_stats.games_won_per_type[i];
+                int wr = played > 0 ? (won * 100) / played : 0;
+                mvprintw(11 + i, 10, "%d. %-25s: %d played, %d won (%d%%)",
+                    i + 1, games[i].name, played, won, wr);
+            }
+            
+            mvprintw(22, 10, "Press 'b' to go back, 'r' to reset");
+        } else if (currentScreen == -1) {
             pthread_mutex_lock(&game_mutex);
             int final_score = game_shared.score;
             pthread_mutex_unlock(&game_mutex);
@@ -115,6 +156,7 @@ void* render_thread(void* arg)
         } else if (currentScreen == 0) {
             mvprintw(5, 10, "=== KernelWare ===");
             mvprintw(8, 10, "Press any key to start");
+            mvprintw(10, 10, "Press 's' for stats");
         } else {
             mvprintw(1, 10, "=== KernelWare ===");
 
@@ -153,7 +195,7 @@ void* render_thread(void* arg)
 
 int main() {
 
-
+    stats_load();  // Load stats from disk
 
     driverFD = open("/dev/kernelware", O_RDWR);
     if(driverFD < 0)

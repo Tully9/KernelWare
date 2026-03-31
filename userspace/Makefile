@@ -4,6 +4,7 @@ LIBS   = -lncurses
 
 SRCS = main.c \
        input.c \
+       stats.c \
        games/games.c \
        games/game_pipedream.c \
        games/game_rotbrain.c \
