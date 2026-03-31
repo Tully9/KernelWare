@@ -10,6 +10,7 @@ SRCS = main.c \
        games/game_rotbrain.c \
        games/game_killit.c \
        games/game_memleak.c \
+       games/game_memleak_detective.c \
        games/game_typefaster.c \
        games/game_loadbalancer.c \
        games/game_hackthehost.c

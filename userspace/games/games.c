@@ -16,6 +16,9 @@ void game_killit_draw(void);
 int  game_memleak_run(int fd);
 void game_memleak_draw(void);
 
+int  game_memleak_detective_run(int fd);
+void game_memleak_detective_draw(void);
+
 int  game_typefaster_run(int fd);
 void game_typefaster_draw(void);
 
@@ -50,6 +53,12 @@ game_def_t games[] = {
         .input_mode = INPUT_MODE_BUTTONS,
         .run  = game_memleak_run,
         .draw = game_memleak_draw,
+    },
+    {
+        .name = "MEMORY LEAK DETECTIVE - Find the leak in code",
+        .input_mode = INPUT_MODE_TEXT,
+        .run  = game_memleak_detective_run,
+        .draw = game_memleak_detective_draw,
     },
     {
         .name       = "TYPE FASTER - Mash keys to win",
