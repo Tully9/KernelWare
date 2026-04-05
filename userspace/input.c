@@ -8,6 +8,7 @@
 #include <pthread.h>
 #include "games/games.h"
 #include "../shared/kw_ioctl.h"
+#include "stats.h"
 
 static int drv_fd = -1;
 
@@ -89,8 +90,31 @@ static void ssh_input_loop(void)
 
         int c = kw_getch();
 
-        if (currentScreen <= 0) {
-            currentScreen++;  // -1 (game over) -> 0 (start), 0 (start) -> 1 (game)
+        // Handle stats screen navigation
+        if (currentScreen == -2) {
+            if (c == 'b') {
+                currentScreen = 0;  // back to start screen
+            } else if (c == 'r') {
+                extern void stats_reset(void);
+                stats_reset();
+            }
+            continue;
+        }
+
+        // Handle start screen navigation
+        if (currentScreen == 0) {
+            if (c == 's') {
+                extern void stats_load(void);
+                stats_load();
+                currentScreen = -2;  // go to stats screen
+            } else {
+                currentScreen++;  // go to game
+            }
+            continue;
+        }
+
+        if (currentScreen < 0) {
+            currentScreen++;  // -1 (game over) -> 0 (start)
             continue;
         }
 
@@ -180,10 +204,29 @@ void *kw_input_thread(void *arg) // arg isn't used but compiler will give a wari
         if (ev.type != EV_KEY || ev.value != 1)
             continue;
         
+        // Handle stats screen navigation
+        if (currentScreen == -2) {
+            if (ev.code == KEY_B) {
+                currentScreen = 0;  // back to start screen
+            } else if (ev.code == KEY_R) {
+                stats_reset();
+            }
+            continue;
+        }
 
-        // checks nav keys
-        if (currentScreen <= 0) {
-            currentScreen++;
+        // Handle start screen navigation
+        if (currentScreen == 0) {
+            if (ev.code == KEY_S) {
+                stats_load();
+                currentScreen = -2;  // go to stats screen
+            } else {
+                currentScreen++;  // go to game
+            }
+            continue;
+        }
+
+        if (currentScreen < 0) {
+            currentScreen++;  // -1 (game over) -> 0 (start)
             continue;
         }
     
